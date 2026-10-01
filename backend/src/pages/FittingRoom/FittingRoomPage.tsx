@@ -20,6 +20,11 @@ import { useAuth } from '@/context/AuthContext';
 import {
   getAvatar,
 } from '@/services/firebase/avatar';
+import { 
+  getUserProfile
+} from '@/services/firebase/users';
+
+import { getMeasurements } from '@/services/firebase/measurements';
 
 import { getCaimentMessage } from '@/data/mock/mockCaiment';
 import { formatCurrency } from '@/utils/format';
@@ -47,48 +52,97 @@ export default function FittingRoomPage() {
   const [product, setProduct] =
     useState<SelectedProduct | null>(null);
 
+  const [measurementsReady, setMeasurementsReady] =
+  useState<boolean | null>(null);
+
+  const [measurements, setMeasurements] =
+  useState<Awaited<ReturnType<typeof getMeasurements>>>(null);
+
   useEffect(() => {
-    async function loadAvatar() {
-      if (!user) return;
+    async function loadFittingRoom() {
+      if (!user) {
+        setMeasurementsReady(false);
+        return;
+      }
 
       try {
-        const avatar =
-          await getAvatar(user.uid);
+        // Verifica se o usuário já cadastrou suas medidas.
+        const profile = await getUserProfile(user.uid);
+
+        const userMeasurements =
+          await getMeasurements(user.uid);
+
+        console.log(
+          '========== MEDIDAS DO USUÁRIO =========='
+        );
+
+        console.log(
+          'UID:',
+          user.uid
+        );
+
+        console.log(
+          'PROFILE:',
+          profile
+        );
+
+        console.log(
+          'measurementsCompleted:',
+          profile?.measurementsCompleted
+        );
+
+        console.log(
+          'MEASUREMENTS:',
+          userMeasurements
+        );
+
+        setMeasurements(
+          userMeasurements
+        );
+
+        setMeasurementsReady(
+          profile?.measurementsCompleted === true
+        );
+
+        // Carrega o avatar salvo do usuário.
+        const avatar = await getAvatar(user.uid);
 
         if (avatar?.modelUrl) {
-          setModelUrl(
-            avatar.modelUrl,
+          setModelUrl(avatar.modelUrl);
+          setAvatarReady(true);
+        }
+
+        // Recupera a peça escolhida na Fitsense.
+        const savedProduct =
+          sessionStorage.getItem(
+            'caiment_selected_product'
           );
 
-          setAvatarReady(true);
+        if (savedProduct) {
+          try {
+            const parsedProduct =
+              JSON.parse(savedProduct);
+
+            setProduct(parsedProduct);
+          } catch {
+            console.error(
+              'Não foi possível carregar a peça selecionada.'
+            );
+          }
         }
       } catch (error) {
         console.error(
-          'Erro ao carregar avatar:',
-          error,
+          'Erro ao carregar dados do provador:',
+          error
         );
+
+        // Se não for possível confirmar as medidas,
+        // tratamos a etapa como ainda não concluída.
+        setMeasurementsReady(false);
       }
     }
 
-    loadAvatar();
-
-    const savedProduct =
-      sessionStorage.getItem(
-        'caiment_selected_product',
-      );
-
-    if (savedProduct) {
-      try {
-        const parsedProduct =
-          JSON.parse(savedProduct);
-
-        setProduct(parsedProduct);
-      } catch {
-        console.error(
-          'Não foi possível carregar a peça selecionada.',
-        );
-      }
-    }
+    loadFittingRoom();
   }, [user]);
 
   const recommendation = {
@@ -100,6 +154,78 @@ export default function FittingRoomPage() {
     reason:
       'Recomendação baseada nas medidas cadastradas no seu perfil e nas características da peça.',
   };
+
+  // ============================================================
+  // BLOQUEIO DO PROVADOR
+  // ============================================================
+  //
+  // As medidas são obrigatórias para a prova da roupa,
+  // pois serão utilizadas posteriormente na deformação
+  // e no ajuste da peça ao corpo.
+  // ============================================================
+  if (measurementsReady === null) {
+    return (
+      <DashboardLayout title="Provador virtual">
+        <Card className="flex min-h-[420px] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-caiment-purple-100 border-t-caiment-purple-500" />
+
+            <p className="mt-4 text-sm text-caiment-ink-soft">
+              Verificando suas medidas...
+            </p>
+          </div>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
+  // Sem medidas cadastradas, o usuário precisa passar
+  // pela etapa de personalização antes de usar o provador.
+  if (!measurementsReady) {
+    return (
+      <DashboardLayout title="Provador virtual">
+        <Card className="overflow-hidden">
+          <div className="relative flex min-h-[420px] flex-col items-center justify-center overflow-hidden rounded-3xl bg-caiment-ink px-6 py-12 text-center">
+            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-caiment-purple-600/30 blur-3xl" />
+
+            <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-caiment-lime/10 blur-3xl" />
+
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-3xl bg-caiment-purple-500 text-white shadow-lg">
+              <Ruler size={28} />
+            </div>
+
+            <h3 className="relative mt-6 font-display text-2xl font-medium text-white">
+              Personalize suas medidas
+            </h3>
+
+            <p className="relative mt-2 max-w-md text-sm leading-relaxed text-white/60">
+              Antes de usar o provador virtual,
+              precisamos das suas medidas para
+              personalizar sua experiência e
+              recomendar tamanhos.
+            </p>
+
+            <div className="relative mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link to="/medidas">
+                <Button className="bg-caiment-lime text-caiment-ink hover:bg-caiment-lime-soft">
+                  Personalizar agora
+                </Button>
+              </Link>
+
+              <Link to="/avatar">
+                <Button
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  Mais tarde
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Provador virtual">
@@ -208,12 +334,9 @@ export default function FittingRoomPage() {
                   modelUrl ? (
 
                     <AvatarViewer
-                      modelUrl={
-                        modelUrl
-                      }
-                      clothingModelUrl={
-                        product.clothingModel
-                      }
+                      modelUrl={modelUrl}
+                      clothingModelUrl={product.clothingModel}
+                      measurements={measurements}
                     />
 
                   ) : (

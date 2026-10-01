@@ -1,3 +1,4 @@
+// Importa recursos do React usados para estado, referências e efeitos.
 import {
   Suspense,
   useEffect,
@@ -5,18 +6,29 @@ import {
   useState,
 } from 'react';
 
+// Importa o Canvas e ferramentas do React Three Fiber.
 import {
   Canvas,
   useThree,
 } from '@react-three/fiber';
 
+// Importa controles de câmera e sombras do Drei.
 import {
   OrbitControls,
   ContactShadows,
 } from '@react-three/drei';
 
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+// Importa o tipo dos controles da câmera.
+import type {
+  OrbitControls as OrbitControlsImpl,
+} from 'three-stdlib';
 
+// Importa as medidas cadastradas pelo usuário.
+import type {
+  UserMeasurements,
+} from '@/services/firebase/measurements';
+
+// Importa recursos usados para manipular os modelos 3D.
 import {
   Box3,
   Vector3,
@@ -25,29 +37,63 @@ import {
   Object3D,
 } from 'three';
 
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+// Carrega arquivos GLTF/GLB.
+import {
+  GLTFLoader,
+} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
+// Importa os ícones dos controles.
 import {
   RotateCcw,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
 
-import { AvatarPlaceholderModel } from './AvatarPlaceholderModel';
-import { LoadingState } from '@/components/ui/LoadingState';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+// Importa componentes usados pelo visualizador.
+import {
+  AvatarPlaceholderModel,
+} from './AvatarPlaceholderModel';
+
+import {
+  LoadingState,
+} from '@/components/ui/LoadingState';
+
+import {
+  ErrorBoundary,
+} from '@/components/ui/ErrorBoundary';
+
+// ============================================================
+// PROPRIEDADES DO AVATAR VIEWER
+// ============================================================
 
 interface AvatarViewerProps {
+  /** URL do avatar 3D salvo. */
   modelUrl?: string | null;
+
+  /** URL da roupa 3D selecionada. */
   clothingModelUrl?: string | null;
+
+  /** Medidas cadastradas pelo usuário. */
+  measurements?: UserMeasurements | null;
+
+  /** Classes adicionais do componente. */
   className?: string;
+
+  /** Define se os controles de câmera serão exibidos. */
   showControls?: boolean;
 }
 
-/* =========================================================
-   PROXY DO MODELO TRIPO
-========================================================= */
+// ============================================================
+// PROXY DO MODELO TRIPO
+// ============================================================
 
+/**
+ * Converte a URL original do modelo em uma URL
+ * do backend do CAIMENT.
+ *
+ * Assim, o navegador não acessa diretamente
+ * o servidor do Tripo.
+ */
 function getModelProxyUrl(
   modelUrl: string
 ): string {
@@ -56,10 +102,13 @@ function getModelProxyUrl(
   )}`;
 }
 
-/* =========================================================
-   AVATAR REAL
-========================================================= */
+// ============================================================
+// AVATAR REAL
+// ============================================================
 
+/**
+ * Responsável por carregar o avatar 3D real.
+ */
 function RealModel({
   url,
   onLoaded,
@@ -69,28 +118,32 @@ function RealModel({
   onLoaded?: () => void;
   onError?: (error: unknown) => void;
 }) {
+  // Guarda o modelo depois que ele for carregado.
   const [model, setModel] =
     useState<Object3D | null>(null);
 
+  // Guarda as funções de retorno em referências.
   const onLoadedRef =
     useRef(onLoaded);
 
   const onErrorRef =
     useRef(onError);
 
+  // Mantém a referência da função de sucesso atualizada.
   useEffect(() => {
-    onLoadedRef.current =
-      onLoaded;
+    onLoadedRef.current = onLoaded;
   }, [onLoaded]);
 
+  // Mantém a referência da função de erro atualizada.
   useEffect(() => {
-    onErrorRef.current =
-      onError;
+    onErrorRef.current = onError;
   }, [onError]);
 
+  // Inicia o carregamento do avatar.
   useEffect(() => {
     let cancelled = false;
 
+    // Verifica se existe uma URL válida.
     if (!url) {
       console.error(
         '❌ URL do avatar está vazia.'
@@ -105,22 +158,11 @@ function RealModel({
       return;
     }
 
-    /*
-     * IMPORTANTE:
-     *
-     * Antes:
-     * loader.load(url)
-     *
-     * Agora:
-     * loader.load(proxyUrl)
-     *
-     * Assim o navegador NÃO acessa
-     * diretamente o servidor do Tripo.
-     */
-
+    // Cria a URL usada pelo backend do CAIMENT.
     const proxyUrl =
       getModelProxyUrl(url);
 
+    // Mostra informações do carregamento no console.
     console.log('');
     console.log(
       '===================================='
@@ -154,12 +196,15 @@ function RealModel({
       proxyUrl
     );
 
+    // Cria o carregador GLTF.
     const loader =
       new GLTFLoader();
 
+    // Carrega o avatar.
     loader.load(
       proxyUrl,
 
+      // Quando o avatar termina de carregar.
       (gltf) => {
         if (cancelled) {
           return;
@@ -176,27 +221,35 @@ function RealModel({
           '===================================='
         );
 
+        // Mostra a cena carregada.
         console.log(
           'Cena:',
           gltf.scene
         );
 
+        // Conta as Meshes existentes no modelo.
         let meshCount = 0;
 
+        // Percorre todos os objetos do avatar.
         gltf.scene.traverse(
           (child) => {
             const mesh =
               child as Mesh;
 
+            // Trata somente objetos que são Mesh.
             if (mesh.isMesh) {
               meshCount++;
 
+              // Garante que a Mesh fique visível.
               mesh.visible = true;
 
+              // Permite que ela projete sombras.
               mesh.castShadow = true;
 
+              // Permite que ela receba sombras.
               mesh.receiveShadow = true;
 
+              // Garante que os materiais fiquem visíveis.
               if (mesh.material) {
                 const materials =
                   Array.isArray(
@@ -208,9 +261,7 @@ function RealModel({
                 materials.forEach(
                   (material) => {
                     material.visible = true;
-
-                    material.needsUpdate =
-                      true;
+                    material.needsUpdate = true;
                   }
                 );
               }
@@ -218,11 +269,13 @@ function RealModel({
           }
         );
 
+        // Mostra quantas Meshes foram encontradas.
         console.log(
           '🧩 Meshes encontradas:',
           meshCount
         );
 
+        // Verifica se o arquivo realmente possui Meshes.
         if (meshCount === 0) {
           console.error(
             '❌ O modelo foi carregado, mas não possui meshes.'
@@ -237,10 +290,10 @@ function RealModel({
           return;
         }
 
-        setModel(
-          gltf.scene
-        );
+        // Guarda a cena carregada.
+        setModel(gltf.scene);
 
+        // Informa que o avatar está pronto.
         console.log(
           '🎉 Avatar pronto para visualizar!'
         );
@@ -248,10 +301,9 @@ function RealModel({
         onLoadedRef.current?.();
       },
 
+      // Mostra o progresso do carregamento.
       (progress) => {
-        if (
-          progress.total > 0
-        ) {
+        if (progress.total > 0) {
           const percent =
             Math.round(
               (progress.loaded /
@@ -265,6 +317,7 @@ function RealModel({
         }
       },
 
+      // Trata erros no carregamento.
       (error) => {
         if (cancelled) {
           return;
@@ -302,15 +355,18 @@ function RealModel({
       }
     );
 
+    // Cancela atualizações quando o componente sai da tela.
     return () => {
       cancelled = true;
     };
   }, [url]);
 
+  // Enquanto o modelo não existir, não renderiza nada.
   if (!model) {
     return null;
   }
 
+  // Envia o modelo para o componente que prepara seu tamanho.
   return (
     <AvatarModelObject
       model={model}
@@ -318,18 +374,24 @@ function RealModel({
   );
 }
 
-/* =========================================================
-   PREPARAÇÃO DO MODELO
-========================================================= */
+// ============================================================
+// PREPARAÇÃO DO AVATAR
+// ============================================================
 
+/**
+ * Centraliza o avatar e define sua altura
+ * dentro da cena 3D.
+ */
 function AvatarModelObject({
   model,
 }: {
   model: Object3D;
 }) {
+  // Referência ao grupo que envolve o avatar.
   const groupRef =
     useRef<Group | null>(null);
 
+  // Ajusta o modelo quando ele estiver disponível.
   useEffect(() => {
     const group =
       groupRef.current;
@@ -338,18 +400,22 @@ function AvatarModelObject({
       return;
     }
 
+    // Atualiza as transformações antes de medir.
     group.updateMatrixWorld(true);
 
+    // Calcula os limites do avatar.
     const box =
       new Box3().setFromObject(
         group
       );
 
+    // Guarda as dimensões do avatar.
     const size =
       new Vector3();
 
     box.getSize(size);
 
+    // Mostra as dimensões no console.
     console.log(
       '📐 Tamanho do avatar:',
       {
@@ -359,28 +425,34 @@ function AvatarModelObject({
       }
     );
 
+    // Define a altura desejada para o avatar.
     const targetHeight =
       3.4;
 
+    // Só redimensiona se a altura for válida.
     if (size.y > 0) {
       const scale =
         targetHeight /
         size.y;
 
+      // Mantém a proporção do corpo.
       group.scale.setScalar(
         scale
       );
     }
 
+    // Atualiza as transformações depois da escala.
     group.updateMatrixWorld(
       true
     );
 
+    // Mede novamente o avatar.
     const scaledBox =
       new Box3().setFromObject(
         group
       );
 
+    // Descobre o centro do avatar.
     const center =
       new Vector3();
 
@@ -388,15 +460,17 @@ function AvatarModelObject({
       center
     );
 
+    // Centraliza horizontalmente.
     group.position.x =
       -center.x;
 
+    // Centraliza no eixo Z.
     group.position.z =
       -center.z;
 
+    // Coloca a base do avatar no chão.
     group.position.y =
-      -scaledBox.min.y -
-      0.8;
+      -scaledBox.min.y;
 
     group.updateMatrixWorld(
       true
@@ -416,20 +490,32 @@ function AvatarModelObject({
   );
 }
 
-/* =========================================================
-   ROUPA
-========================================================= */
+// ============================================================
+// ROUPA
+// ============================================================
 
+/**
+ * Carrega e posiciona a roupa 3D.
+ *
+ * As medidas do usuário já são recebidas aqui.
+ * Neste momento elas ainda não alteram a roupa.
+ * Primeiro vamos descobrir quais Shape Keys
+ * existem no arquivo GLB.
+ */
 function ClothingModel({
   url,
+  measurements,
 }: {
   url: string;
+  measurements?: UserMeasurements | null;
 }) {
+  // Guarda a roupa carregada.
   const [model, setModel] =
     useState<Object3D | null>(
       null
     );
 
+  // Carrega o arquivo GLB da roupa.
   useEffect(() => {
     const loader =
       new GLTFLoader();
@@ -437,33 +523,53 @@ function ClothingModel({
     loader.load(
       url,
 
+      // Executado quando a roupa termina de carregar.
       (gltf) => {
         console.log(
           '✅ Roupa carregada.'
         );
 
+        // Percorre as partes da roupa.
         gltf.scene.traverse(
           (child) => {
             const mesh =
               child as Mesh;
 
+            // Trata somente objetos que são Mesh.
             if (mesh.isMesh) {
+              // Garante que a roupa fique visível.
               mesh.visible = true;
 
+              // Permite que a roupa projete sombras.
               mesh.castShadow = true;
 
+              // Permite que a roupa receba sombras.
               mesh.receiveShadow = true;
+
+              // Verifica se esta Mesh possui Shape Keys.
+              if (
+                mesh.morphTargetDictionary
+              ) {
+                console.log(
+                  '🎯 Shape Keys encontradas na roupa:',
+                  mesh.name,
+                  mesh.morphTargetDictionary
+                );
+              }
             }
           }
         );
 
+        // Guarda a roupa carregada.
         setModel(
           gltf.scene
         );
       },
 
+      // Não precisamos acompanhar o progresso da roupa neste momento.
       undefined,
 
+      // Trata erros no carregamento da roupa.
       (error) => {
         console.error(
           '❌ Erro ao carregar roupa:',
@@ -473,57 +579,69 @@ function ClothingModel({
     );
   }, [url]);
 
+  // Referência ao grupo que controla a roupa.
   const groupRef =
     useRef<Group | null>(null);
 
+  // Posiciona a roupa depois que ela foi carregada.
   useEffect(() => {
     const group =
       groupRef.current;
 
+    // Só continua quando grupo e modelo existirem.
     if (!group || !model) {
       return;
     }
 
+    // Atualiza as transformações.
     group.updateMatrixWorld(
       true
     );
 
+    // Calcula os limites da roupa.
     const box =
       new Box3().setFromObject(
         group
       );
 
+    // Guarda as dimensões.
     const size =
       new Vector3();
 
+    // Guarda o centro.
     const center =
       new Vector3();
 
     box.getSize(size);
-
     box.getCenter(center);
 
+    // Não tenta calcular escala sem altura.
     if (size.y <= 0) {
       return;
     }
 
+    // Altura usada atualmente para a roupa.
     const targetHeight =
       1.65;
 
+    // Redimensiona a roupa proporcionalmente.
     group.scale.setScalar(
       targetHeight /
         size.y
     );
 
+    // Atualiza depois da escala.
     group.updateMatrixWorld(
       true
     );
 
+    // Mede novamente a roupa.
     const scaledBox =
       new Box3().setFromObject(
         group
       );
 
+    // Calcula o novo centro.
     const scaledCenter =
       new Vector3();
 
@@ -531,20 +649,36 @@ function ClothingModel({
       scaledCenter
     );
 
+    // Centraliza no eixo X.
     group.position.x =
       -scaledCenter.x;
 
+    // Centraliza no eixo Z.
     group.position.z =
       -scaledCenter.z;
 
+    // Posiciona a roupa na altura atual.
     group.position.y =
       0.95 -
       scaledCenter.y;
 
+    // Pequeno ajuste para frente.
     group.position.z +=
       0.08;
-  }, [model]);
 
+    // Mostra as medidas recebidas somente para conferência.
+    if (measurements) {
+      console.log(
+        '📏 Medidas recebidas pela roupa:',
+        measurements
+      );
+    }
+  }, [
+    model,
+    measurements,
+  ]);
+
+  // Enquanto a roupa não carregar, não renderiza nada.
   if (!model) {
     return null;
   }
@@ -558,23 +692,29 @@ function ClothingModel({
   );
 }
 
-/* =========================================================
-   CENA
-========================================================= */
+// ============================================================
+// CENA
+// ============================================================
 
+/**
+ * Monta todos os elementos da cena 3D.
+ */
 function Scene({
   modelUrl,
   clothingModelUrl,
+  measurements,
   onAvatarLoaded,
   onAvatarError,
 }: {
   modelUrl?: string | null;
   clothingModelUrl?: string | null;
+  measurements?: UserMeasurements | null;
   onAvatarLoaded: () => void;
   onAvatarError: () => void;
 }) {
   return (
     <>
+      {/* Luz principal da cena. */}
       <hemisphereLight
         args={[
           '#F4F1FC',
@@ -583,10 +723,12 @@ function Scene({
         ]}
       />
 
+      {/* Iluminação geral. */}
       <ambientLight
         intensity={0.4}
       />
 
+      {/* Luz principal com sombras. */}
       <directionalLight
         position={[
           3,
@@ -597,6 +739,7 @@ function Scene({
         castShadow
       />
 
+      {/* Segunda luz para diminuir áreas escuras. */}
       <directionalLight
         position={[
           -3,
@@ -606,6 +749,7 @@ function Scene({
         intensity={0.4}
       />
 
+      {/* Luz adicional. */}
       <pointLight
         position={[
           0,
@@ -616,8 +760,9 @@ function Scene({
         color="#C6F24E"
       />
 
+      {/* Modelos que podem carregar de forma assíncrona. */}
       <Suspense fallback={null}>
-
+        {/* Carrega o avatar real quando existe uma URL. */}
         {modelUrl ? (
           <RealModel
             url={modelUrl}
@@ -632,16 +777,20 @@ function Scene({
           <AvatarPlaceholderModel />
         )}
 
+        {/* Carrega a roupa quando existe uma URL. */}
         {clothingModelUrl && (
           <ClothingModel
             url={
               clothingModelUrl
             }
+            measurements={
+              measurements
+            }
           />
         )}
-
       </Suspense>
 
+      {/* Sombra abaixo dos modelos. */}
       <ContactShadows
         position={[
           0,
@@ -657,21 +806,26 @@ function Scene({
   );
 }
 
-/* =========================================================
-   CÂMERA
-========================================================= */
+// ============================================================
+// CÂMERA
+// ============================================================
 
+/**
+ * Define a posição inicial da câmera.
+ */
 function CameraController() {
   const { camera } =
     useThree();
 
   useEffect(() => {
+    // Define a posição inicial.
     camera.position.set(
       0,
       0.35,
       5.2
     );
 
+    // Faz a câmera olhar para o avatar.
     camera.lookAt(
       0,
       0.15,
@@ -682,27 +836,35 @@ function CameraController() {
   return null;
 }
 
-/* =========================================================
-   VIEWER
-========================================================= */
+// ============================================================
+// VIEWER
+// ============================================================
 
+/**
+ * Componente principal do visualizador 3D.
+ */
 export function AvatarViewer({
   modelUrl,
   clothingModelUrl,
+  measurements,
   className,
   showControls = true,
 }: AvatarViewerProps) {
+  // Referência aos controles da câmera.
   const controlsRef =
     useRef<OrbitControlsImpl | null>(
       null
     );
 
+  // Indica se o avatar terminou de carregar.
   const [ready, setReady] =
     useState(false);
 
+  // Indica se ocorreu erro no avatar.
   const [modelError, setModelError] =
     useState(false);
 
+  // Reinicia o estado quando a URL do avatar muda.
   useEffect(() => {
     console.log(
       '🖼️ AvatarViewer modelUrl:',
@@ -710,14 +872,15 @@ export function AvatarViewer({
     );
 
     setModelError(false);
-
     setReady(false);
   }, [modelUrl]);
 
+  // Reseta a câmera.
   const handleReset = () => {
     controlsRef.current?.reset();
   };
 
+  // Controla o zoom da câmera.
   const handleZoom = (
     dir: 1 | -1
   ) => {
@@ -731,6 +894,7 @@ export function AvatarViewer({
     const camera =
       controls.object;
 
+    // Aproxima ou afasta a câmera.
     const factor =
       dir === 1
         ? 0.85
@@ -749,6 +913,7 @@ export function AvatarViewer({
         className ?? ''
       }`}
     >
+      {/* Tela de carregamento. */}
       {!ready &&
         !modelError && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
@@ -758,6 +923,7 @@ export function AvatarViewer({
           </div>
         )}
 
+      {/* Mensagem de erro. */}
       {modelError ? (
         <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 p-6 text-center">
           <div className="text-3xl">
@@ -765,14 +931,14 @@ export function AvatarViewer({
           </div>
 
           <p className="text-sm font-medium text-caiment-ink">
-            Não foi possível carregar o avatar 3D.
+            Não foi possível carregar
+            o avatar 3D.
           </p>
 
           <p className="max-w-xs text-xs text-caiment-ink-soft">
             O avatar foi gerado, mas o
-            backend não conseguiu
-            entregar o arquivo 3D
-            ao visualizador.
+            backend não conseguiu entregar
+            o arquivo 3D ao visualizador.
           </p>
         </div>
       ) : (
@@ -786,6 +952,7 @@ export function AvatarViewer({
             </div>
           }
         >
+          {/* Espaço 3D onde avatar e roupa serão renderizados. */}
           <Canvas
             shadows
             camera={{
@@ -802,14 +969,19 @@ export function AvatarViewer({
               );
             }}
           >
+            {/* Configura a câmera. */}
             <CameraController />
 
+            {/* Envia os dados para a cena. */}
             <Scene
               modelUrl={
                 modelUrl
               }
               clothingModelUrl={
                 clothingModelUrl
+              }
+              measurements={
+                measurements
               }
               onAvatarLoaded={() => {
                 console.log(
@@ -827,6 +999,7 @@ export function AvatarViewer({
               }}
             />
 
+            {/* Controles de rotação e distância. */}
             <OrbitControls
               ref={controlsRef}
               makeDefault
@@ -849,9 +1022,11 @@ export function AvatarViewer({
         </ErrorBoundary>
       )}
 
+      {/* Botões de controle. */}
       {showControls &&
         !modelError && (
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full glass px-2 py-2">
+            {/* Diminuir zoom. */}
             <button
               onClick={() =>
                 handleZoom(-1)
@@ -862,6 +1037,7 @@ export function AvatarViewer({
               <ZoomOut size={15} />
             </button>
 
+            {/* Resetar câmera. */}
             <button
               onClick={
                 handleReset
@@ -874,6 +1050,7 @@ export function AvatarViewer({
               />
             </button>
 
+            {/* Aumentar zoom. */}
             <button
               onClick={() =>
                 handleZoom(1)
