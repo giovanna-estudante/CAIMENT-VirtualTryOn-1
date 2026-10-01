@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* ---- Cor: base clara + roxo/lilás de marca + lime de destaque ---- */
+  --color-caiment-bg: #FBFAFE;
+  --color-caiment-surface: #FFFFFF;
+  --color-caiment-ink: #221B33;
+  --color-caiment-ink-soft: #6E6580;
+
+  --color-caiment-purple-50: #F4F1FC;
+  --color-caiment-purple-100: #E7E0FA;
+  --color-caiment-purple-200: #CDBEF2;
+  --color-caiment-purple-300: #A98EE8;
+  --color-caiment-purple-400: #8862DD;
+  --color-caiment-purple-500: #6E42D1;
+  --color-caiment-purple-600: #5A2FB8;
+  --color-caiment-purple-700: #472494;
+  --color-caiment-purple-800: #341A6E;
+  --color-caiment-purple-900: #221145;
+
+  --color-caiment-lime: #C6F24E;
+  --color-caiment-lime-soft: #E5FAB3;
+  --color-caiment-lime-deep: #9CCB27;
+
+  --color-caiment-line: #E9E4F5;
+
+  /* ---- Tipografia ---- */
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* ---- Raio ---- */
+  --radius-caiment-sm: 10px;
+  --radius-caiment-md: 16px;
+  --radius-caiment-lg: 24px;
+  --radius-caiment-xl: 32px;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-caiment-bg);
+  color: var(--color-caiment-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background: var(--color-caiment-lime);
+  color: var(--color-caiment-ink);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--color-caiment-purple-200); border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.glass {
+  background: color-mix(in srgb, white 70%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid color-mix(in srgb, white 40%, var(--color-caiment-purple-200) 60%);
+}
+
+.glass-dark {
+  background: color-mix(in srgb, var(--color-caiment-purple-900) 78%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid color-mix(in srgb, white 12%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@keyframes caiment-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: caiment-float 5s ease-in-out infinite; }
+
+@keyframes caiment-pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-caiment-lime) 55%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+.animate-pulse-ring { animation: caiment-pulse-ring 1.8s ease-out infinite; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeSlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-slide-up { animation: fadeSlideUp 0.5s ease both; }
