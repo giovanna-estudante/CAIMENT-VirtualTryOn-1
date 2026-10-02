@@ -907,6 +907,11 @@ export function AvatarViewer({
     controls.update();
   };
 
+  console.log(
+    '👕 URL DA ROUPA:',
+       clothingModelUrl
+  );
+
   return (
     <div
       className={`relative overflow-hidden rounded-3xl bg-gradient-to-b from-caiment-purple-50 to-white ${

@@ -7,7 +7,9 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  root: 'backend',
+  // A raiz do Vite é a pasta principal do projeto.
+  // Isso permite que o Vite encontre a pasta public/.
+  root: __dirname,
 
   envDir: __dirname,
 
@@ -24,12 +26,13 @@ export default defineConfig({
 
   resolve: {
     alias: {
+      // O código React está dentro de backend/src.
       '@': path.resolve(__dirname, './backend/src'),
     },
   },
 
   build: {
-    outDir: '../dist',
+    outDir: path.resolve(__dirname, './dist'),
     emptyOutDir: true,
   },
 })

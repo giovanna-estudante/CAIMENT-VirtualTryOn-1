@@ -45,7 +45,7 @@ const products: Product[] = [
     price: 129.9,
     image:
       'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=90',
-    clothingModel: '/models/camiseta-essential.glb',
+    clothingModel: '/models/clothes/camiseta-essential.glb',
     description:
       'Uma camiseta essencial para todos os dias. Modelagem confortável, visual minimalista e tecido macio para acompanhar diferentes combinações.',
     sizes: ['PP', 'P', 'M', 'G', 'GG'],
