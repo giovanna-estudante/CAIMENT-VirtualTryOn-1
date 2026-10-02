@@ -525,8 +525,15 @@ function ClothingModel({
 
       // Executado quando a roupa termina de carregar.
       (gltf) => {
+
+        console.log(
+          '===================================='
+        );
         console.log(
           '✅ Roupa carregada.'
+        );
+        console.log(
+          '===================================='
         );
 
         // Percorre as partes da roupa.
@@ -547,14 +554,210 @@ function ClothingModel({
               mesh.receiveShadow = true;
 
               // Verifica se esta Mesh possui Shape Keys.
-              if (
-                mesh.morphTargetDictionary
-              ) {
+              if (mesh.morphTargetDictionary) {
+                // Mostra os nomes das Shape Keys existentes na camiseta.
                 console.log(
-                  '🎯 Shape Keys encontradas na roupa:',
-                  mesh.name,
+                  "🎯 SHAPE KEYS DA ROUPA:",
+                  Object.keys(mesh.morphTargetDictionary)
+                );
+
+                // Mostra também o índice de cada Shape Key.
+                console.log(
+                  "🎯 ÍNDICES DAS SHAPE KEYS:",
                   mesh.morphTargetDictionary
                 );
+
+                if (
+                  mesh.morphTargetDictionary &&
+                  mesh.morphTargetInfluences &&
+                  measurements
+                ) {
+                  // ============================================================
+                  // FUNÇÃO PARA CONVERTER UMA MEDIDA EM INFLUÊNCIA
+                  // ============================================================
+                  //
+                  // As Shape Keys trabalham normalmente entre 0 e 1.
+                  // As medidas do usuário estão em centímetros.
+                  //
+                  // Esta função transforma uma medida em um valor entre 0 e 1.
+                  // Os limites ainda são provisórios e serão ajustados depois
+                  // de testarmos a modelagem da camiseta.
+                  // ============================================================
+
+                  const calcularInfluence = (
+                    medida: number,
+                    minimo: number,
+                    maximo: number
+                  ) => {
+                    const valor =
+                      (medida - minimo) /
+                      (maximo - minimo);
+
+                    return Math.max(
+                      0,
+                      Math.min(1, valor)
+                    );
+                  };
+
+                  // ============================================================
+                  // CINTURA
+                  // ============================================================
+
+                  const cinturaIndex =
+                    mesh.morphTargetDictionary["Cintura"];
+
+                  if (cinturaIndex !== undefined) {
+                    const influence = calcularInfluence(
+                      measurements.waist,
+                      60,
+                      100
+                    );
+
+                    mesh.morphTargetInfluences[cinturaIndex] =
+                      influence;
+
+                    console.log(
+                      "👕 SHAPE KEY CINTURA",
+                      {
+                        medida: measurements.waist,
+                        influence,
+                      }
+                    );
+                  }
+
+                  // ============================================================
+                  // BUSTO
+                  // ============================================================
+
+                  const bustoIndex =
+                    mesh.morphTargetDictionary["Busto"];
+
+                  if (bustoIndex !== undefined) {
+                    const influence = calcularInfluence(
+                      measurements.bust,
+                      70,
+                      120
+                    );
+
+                    mesh.morphTargetInfluences[bustoIndex] =
+                      influence;
+
+                    console.log(
+                      "👕 SHAPE KEY BUSTO",
+                      {
+                        medida: measurements.bust,
+                        influence,
+                      }
+                    );
+                  }
+
+                  // ============================================================
+                  // BUSTO + OMBROS
+                  // ============================================================
+
+                  const bustoOmbrosIndex =
+                    mesh.morphTargetDictionary["Busto+Ombros"];
+
+                  if (bustoOmbrosIndex !== undefined) {
+                    const influence = calcularInfluence(
+                      measurements.shoulders,
+                      30,
+                      55
+                    );
+
+                    mesh.morphTargetInfluences[
+                      bustoOmbrosIndex
+                    ] = influence;
+
+                    console.log(
+                      "👕 SHAPE KEY BUSTO + OMBROS",
+                      {
+                        medida: measurements.shoulders,
+                        influence,
+                      }
+                    );
+                  }
+
+                  // ============================================================
+                  // MANGA
+                  // ============================================================
+
+                  const mangaIndex =
+                    mesh.morphTargetDictionary["Manga"];
+
+                  if (mangaIndex !== undefined) {
+                    const influence = calcularInfluence(
+                      measurements.arm,
+                      20,
+                      40
+                    );
+
+                    mesh.morphTargetInfluences[mangaIndex] =
+                      influence;
+
+                    console.log(
+                      "👕 SHAPE KEY MANGA",
+                      {
+                        medida: measurements.arm,
+                        influence,
+                      }
+                    );
+                  }
+
+                  // ============================================================
+                  // MANGA 2
+                  // ============================================================
+
+                  const manga2Index =
+                    mesh.morphTargetDictionary["Manga2"];
+
+                  if (manga2Index !== undefined) {
+                    const influence = calcularInfluence(
+                      measurements.arm,
+                      20,
+                      40
+                    );
+
+                    mesh.morphTargetInfluences[manga2Index] =
+                      influence;
+
+                    console.log(
+                      "👕 SHAPE KEY MANGA2",
+                      {
+                        medida: measurements.arm,
+                        influence,
+                      }
+                    );
+                  }
+
+                  // ============================================================
+                  // COMPRIMENTO
+                  // ============================================================
+
+                  const comprimentoIndex =
+                    mesh.morphTargetDictionary["Comprimento"];
+
+                  if (comprimentoIndex !== undefined) {
+                    const influence = calcularInfluence(
+                      measurements.height,
+                      150,
+                      190
+                    );
+
+                    mesh.morphTargetInfluences[
+                      comprimentoIndex
+                    ] = influence;
+
+                    console.log(
+                      "👕 SHAPE KEY COMPRIMENTO",
+                      {
+                        medida: measurements.height,
+                        influence,
+                      }
+                    );
+                  }
+                }
+
               }
             }
           }
@@ -585,98 +788,175 @@ function ClothingModel({
 
   // Posiciona a roupa depois que ela foi carregada.
   useEffect(() => {
-    const group =
-      groupRef.current;
+    // ============================================================
+    // 1. VERIFICA SE O MODELO DA ROUPA JÁ ESTÁ DISPONÍVEL
+    // ============================================================
 
-    // Só continua quando grupo e modelo existirem.
+    console.log("👕 1 - EFFECT DA ROUPA EXECUTOU", {
+      temGrupo: !!groupRef.current,
+      temModelo: !!model,
+    });
+
+    const group = groupRef.current;
+
+    // Se a roupa ainda não foi carregada, não fazemos nenhum cálculo.
     if (!group || !model) {
+      console.log("👕 2 - PAROU: sem group ou model");
       return;
     }
 
-    // Atualiza as transformações.
-    group.updateMatrixWorld(
-      true
-    );
+    console.log("👕 3 - GROUP E MODEL OK");
 
-    // Calcula os limites da roupa.
-    const box =
-      new Box3().setFromObject(
-        group
-      );
+    // ============================================================
+    // 2. CALCULA O TAMANHO ORIGINAL DA ROUPA
+    // ============================================================
+    //
+    // O Box3 cria uma "caixa imaginária" ao redor da camiseta.
+    // Isso permite descobrir largura, altura e profundidade
+    // reais do modelo 3D.
+    // ============================================================
 
-    // Guarda as dimensões.
-    const size =
-      new Vector3();
+    const box = new Box3().setFromObject(group);
 
-    // Guarda o centro.
-    const center =
-      new Vector3();
+    console.log("👕 4 - BOX CALCULADO", box);
 
+    const size = new Vector3();
+    const center = new Vector3();
+
+    // Obtém as dimensões da caixa da roupa.
     box.getSize(size);
+
+    // Obtém o ponto central da roupa.
     box.getCenter(center);
 
-    // Não tenta calcular escala sem altura.
+    console.log("👕 5 - TAMANHO DA ROUPA", {
+      x: size.x,
+      y: size.y,
+      z: size.z,
+    });
+
+    console.log("👕 6 - CENTRO DA ROUPA", {
+      x: center.x,
+      y: center.y,
+      z: center.z,
+    });
+
+    // ============================================================
+    // 3. VERIFICA SE A ALTURA DA ROUPA É VÁLIDA
+    // ============================================================
+
     if (size.y <= 0) {
+      console.log(
+        "👕 7 - PAROU: altura da roupa inválida"
+      );
+
       return;
     }
 
-    // Altura usada atualmente para a roupa.
-    const targetHeight =
-      1.65;
+    console.log("👕 8 - VAI ESCALAR A ROUPA");
 
-    // Redimensiona a roupa proporcionalmente.
+    // ============================================================
+    // 4. AJUSTA A ALTURA DA ROUPA
+    // ============================================================
+    //
+    // Por enquanto estamos usando uma altura de teste.
+    // Depois vamos substituir esse valor por um cálculo baseado
+    // no avatar e nas medidas do usuário.
+    // ============================================================
+
+    const targetHeight = 1.65;
+
     group.scale.setScalar(
-      targetHeight /
-        size.y
+      targetHeight / size.y
     );
 
-    // Atualiza depois da escala.
-    group.updateMatrixWorld(
-      true
-    );
+    // Atualiza os cálculos internos do Three.js depois da escala.
+    group.updateMatrixWorld(true);
 
-    // Mede novamente a roupa.
-    const scaledBox =
-      new Box3().setFromObject(
-        group
-      );
+    // ============================================================
+    // VERIFICA O TAMANHO DA ROUPA DEPOIS DAS SHAPE KEYS
+    // ============================================================
+    //
+    // Aqui medimos novamente a camiseta depois que as Shape Keys
+    // já foram aplicadas. Assim conseguimos saber se a geometria
+    // realmente foi modificada antes da escala final.
+    // ============================================================
 
-    // Calcula o novo centro.
-    const scaledCenter =
+    const shapeKeyBox =
+      new Box3().setFromObject(group);
+
+    const shapeKeySize =
       new Vector3();
 
-    scaledBox.getCenter(
-      scaledCenter
+    shapeKeyBox.getSize(shapeKeySize);
+
+    console.log(
+      "👕 TAMANHO APÓS SHAPE KEYS",
+      {
+        x: shapeKeySize.x,
+        y: shapeKeySize.y,
+        z: shapeKeySize.z,
+      }
     );
 
-    // Centraliza no eixo X.
-    group.position.x =
-      -scaledCenter.x;
+    console.log("👕 9 - ROUPA ESCALADA");
 
-    // Centraliza no eixo Z.
-    group.position.z =
-      -scaledCenter.z;
+    // ============================================================
+    // 5. CALCULA NOVAMENTE O TAMANHO APÓS A ESCALA
+    // ============================================================
 
-    // Posiciona a roupa na altura atual.
+    const scaledBox =
+      new Box3().setFromObject(group);
+
+    const scaledCenter = new Vector3();
+
+    scaledBox.getCenter(scaledCenter);
+
+    console.log("👕 10 - CENTRO APÓS ESCALA", {
+      x: scaledCenter.x,
+      y: scaledCenter.y,
+      z: scaledCenter.z,
+    });
+
+    // ============================================================
+    // 6. CENTRALIZA A ROUPA NO AVATAR
+    // ============================================================
+    //
+    // X e Z centralizam a camiseta horizontalmente.
+    // Y coloca a camiseta na altura definida atualmente.
+    //
+    // Esses valores ainda são provisórios.
+    // Vamos substituí-los depois por um posicionamento baseado
+    // no corpo do avatar.
+    // ============================================================
+
+    group.position.x = -scaledCenter.x;
+
+    group.position.z = -scaledCenter.z;
+
     group.position.y =
-      0.95 -
-      scaledCenter.y;
+      0.95 - scaledCenter.y;
 
-    // Pequeno ajuste para frente.
-    group.position.z +=
-      0.08;
+    // Pequeno ajuste provisório para a profundidade.
+    group.position.z += 0.08;
 
-    // Mostra as medidas recebidas somente para conferência.
+    console.log("👕 11 - ROUPA POSICIONADA", {
+      x: group.position.x,
+      y: group.position.y,
+      z: group.position.z,
+    });
+
+    // ============================================================
+    // 7. CONFIRMA SE AS MEDIDAS DO USUÁRIO FORAM RECEBIDAS
+    // ============================================================
+
     if (measurements) {
       console.log(
-        '📏 Medidas recebidas pela roupa:',
+        "📏 Medidas recebidas pela roupa:",
         measurements
       );
     }
-  }, [
-    model,
-    measurements,
-  ]);
+  }, [model, measurements]);
 
   // Enquanto a roupa não carregar, não renderiza nada.
   if (!model) {
