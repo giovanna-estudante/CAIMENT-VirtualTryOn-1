@@ -4,6 +4,7 @@ import {
   signOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
+  deleteUser,
   type User,
 } from "firebase/auth";
 
@@ -37,6 +38,14 @@ export async function loginUser(
 
 export async function logoutUser() {
   await signOut(auth);
+}
+
+export async function deleteCurrentUser() {
+  if (!auth.currentUser) {
+    throw new Error("Nenhum usuário está autenticado.");
+  }
+
+  await deleteUser(auth.currentUser);
 }
 
 export async function resetPassword(email: string) {

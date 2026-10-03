@@ -3,6 +3,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -64,4 +65,10 @@ export async function updateUserProfile(
     ...data,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function deleteUserProfile(uid: string) {
+  const userRef = doc(db, 'users', uid);
+
+  await deleteDoc(userRef);
 }

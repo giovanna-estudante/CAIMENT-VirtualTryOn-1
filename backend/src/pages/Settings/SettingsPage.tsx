@@ -21,6 +21,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   getUserProfile,
   updateUserProfile,
+  deleteUserProfile,
 } from '@/services/firebase/users';
 
 import {
@@ -28,6 +29,8 @@ import {
   saveMeasurements,
   type UserMeasurements,
 } from '@/services/firebase/measurements';
+
+import { deleteCurrentUser } from '@/services/firebase/auth';
 
 import { cn } from '@/utils/cn';
 
@@ -296,6 +299,49 @@ export default function SettingsPage() {
       );
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  // =========================
+  // EXCLUIR PERFIL
+  // =========================
+
+  const handleDeleteAccount = async () => {
+    if (!user) {
+      show('Você precisa estar conectado para excluir sua conta.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Tem certeza que deseja excluir sua conta? Essa ação não poderá ser desfeita.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      // Primeiro exclui o perfil salvo no Firestore.
+      await deleteUserProfile(user.uid);
+
+      // Depois exclui a conta do Firebase Authentication.
+      await deleteCurrentUser();
+
+      // O usuário será desconectado automaticamente.
+      window.location.href = '/login';
+    } catch (error: any) {
+      console.error('Erro ao excluir conta:', error);
+
+      if (error?.code === 'auth/requires-recent-login') {
+        show(
+          'Por segurança, faça login novamente antes de excluir sua conta.'
+        );
+        return;
+      }
+
+      show(
+        'Não foi possível excluir sua conta. Tente novamente.'
+      );
     }
   };
 
@@ -583,7 +629,9 @@ export default function SettingsPage() {
 
                 <div className="pt-16">
 
-                  <button className="flex items-center gap-2 text-xs font-medium text-caiment-ink/70 hover:text-caiment-ink">
+                  <button 
+                    onClick={handleDeleteAccount}
+                    className="flex items-center gap-2 text-xs font-medium text-caiment-ink/70 hover:text-caiment-ink">
 
                     <Trash2
                       size={13}
