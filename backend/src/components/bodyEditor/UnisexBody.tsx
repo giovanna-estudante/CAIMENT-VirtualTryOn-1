@@ -713,6 +713,43 @@ export function UnisexBody({
         onChange={onChangeMeasurement}
       />
 
+      {/*
+        PONTOS UTILIZADOS PARA POSTERIORMENTE POSICIONAR A PEÇA DE ROUPA
+      */}
+      <MeasurementPoint
+        medida="alturaPeCintura"
+        x={10}
+        y={72}
+        valor={medidas.alturaPeCintura}
+        valorBase={95}
+        valorMinimo={70}
+        valorMaximo={140}
+        selecionado={
+          medidaSelecionada === "alturaPeCintura"
+        }
+        onClick={() =>
+          onSelectMeasurement?.("alturaPeCintura")
+        }
+        onChange={onChangeMeasurement}
+      />
+
+      <MeasurementPoint
+        medida="alturaCinturaOmbros"
+        x={90}
+        y={30}
+        valor={medidas.alturaCinturaOmbros}
+        valorBase={45}
+        valorMinimo={30}
+        valorMaximo={70}
+        selecionado={
+          medidaSelecionada === "alturaCinturaOmbros"
+        }
+        onClick={() =>
+          onSelectMeasurement?.("alturaCinturaOmbros")
+        }
+        onChange={onChangeMeasurement}
+      />
+
     </div>
   );
 }

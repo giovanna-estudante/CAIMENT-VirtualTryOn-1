@@ -16,6 +16,8 @@
  */
 export type MeasurementName =
   | "altura"
+  | "alturaPeCintura"
+  | "alturaCinturaOmbros"
   | "ombros"
   | "torax"
   | "cintura"
@@ -30,20 +32,12 @@ export type MeasurementName =
  * Medidas utilizadas pelo modelo unissex.
  */
 export interface UnisexMeasurements {
-
-  /** Altura total do corpo em centímetros. */
   altura: number;
-
-  /** Distância entre os ombros em centímetros. */
+  alturaPeCintura: number;
+  alturaCinturaOmbros: number;
   ombros: number;
-
-  /** Circunferência do tórax em centímetros. */
   torax?: number;
-
-  /** Circunferência da cintura em centímetros. */
   cintura?: number;
-
-  /** Circunferência do quadril em centímetros. */
   quadril?: number;
 }
 
@@ -55,12 +49,7 @@ export interface UnisexMeasurements {
 /**
  * Guarda o modelo corporal e suas respectivas medidas.
  */
-export interface UserMeasurements {
-
-  /** Medidas correspondentes ao modelo escolhido. */
-  medidas:
-    | UnisexMeasurements;
-}
+export type UserMeasurements = UnisexMeasurements;
 
 
 // ============================================================
@@ -108,20 +97,12 @@ export interface MeasurementValue {
  * de cada medida individualmente.
  */
 export interface DetailedBodyMeasurements {
-
-  /** Altura do usuário. */
   altura: MeasurementValue;
-
-  /** Distância entre os ombros. */
+  alturaPeCintura: MeasurementValue;
+  alturaCinturaOmbros: MeasurementValue;
   ombros: MeasurementValue;
-
-  /** Circunferência do tórax/busto/peitoral. */
   torax?: MeasurementValue;
-
-  /** Circunferência da cintura. */
   cintura?: MeasurementValue;
-
-  /** Circunferência do quadril. */
   quadril?: MeasurementValue;
 }
 
@@ -149,19 +130,11 @@ export interface BodyProfile {
  * diretamente pelo editor corporal.
  */
 export interface EditableMeasurements {
-
-  /** Altura em centímetros. */
   altura: number;
-
-  /** Distância entre os ombros em centímetros. */
+  alturaPeCintura: number;
+  alturaCinturaOmbros: number;
   ombros: number;
-
-  /** Circunferência do tórax em centímetros. */
   torax?: number;
-
-  /** Circunferência da cintura em centímetros. */
   cintura?: number;
-
-  /** Circunferência do quadril em centímetros. */
   quadril?: number;
 }

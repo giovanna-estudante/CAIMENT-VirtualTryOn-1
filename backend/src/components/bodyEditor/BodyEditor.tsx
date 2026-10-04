@@ -35,6 +35,7 @@ import {
 // ============================================================
 
 interface BodyEditorProps {
+  medidasIniciais?: EditableMeasurements;
   onChange?: (
     medidas: EditableMeasurements
   ) => void;
@@ -45,6 +46,7 @@ interface BodyEditorProps {
 // ============================================================
 
 export function BodyEditor({
+  medidasIniciais,
   onChange,
 }: BodyEditorProps) {
 
@@ -55,9 +57,22 @@ export function BodyEditor({
   // Guarda as medidas utilizadas pelo modelo corporal.
 
   const [medidas, setMedidas] =
-    useState<EditableMeasurements>(
-      defaultUnisexMeasurements
-    );
+    useState<EditableMeasurements>({
+      ...defaultUnisexMeasurements,
+      ...medidasIniciais,
+
+      // ==========================================================
+      // Correção do formulário de cadastro de medidas para que o 
+      // sistema mesmo com a nova versão, permita que as contas
+      // com cadastros já existentes editem os novos campos
+      // ==========================================================
+      alturaPeCintura:
+        medidasIniciais?.alturaPeCintura ??
+        defaultUnisexMeasurements.alturaPeCintura,
+      alturaCinturaOmbros:
+        medidasIniciais?.alturaCinturaOmbros ??
+        defaultUnisexMeasurements.alturaCinturaOmbros,
+    });
 
   // ==========================================================
   // MEDIDA SELECIONADA
@@ -636,6 +651,137 @@ export function BodyEditor({
 
             </div>
 
+          </div>
+
+          {/* ==================================================
+              ALTURA PÉ CINTURA
+              ================================================== */}
+
+          <div
+            style={{
+              marginBottom: "14px",
+            }}
+          >
+            <label
+              htmlFor="alturaPeCintura"
+              style={{
+                display: "block",
+                marginBottom: "6px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#402b47",
+              }}
+            >
+              Pernas - chão até cintura
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <input
+                id="alturaPeCintura"
+                type="number"
+                min="1"
+                value={medidas.alturaPeCintura}
+                onChange={(event) =>
+                  alterarMedida(
+                    "alturaPeCintura",
+                    Number(event.target.value)
+                  )
+                }
+                onFocus={() =>
+                  setMedidaSelecionada("alturaPeCintura")
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #ddd5df",
+                  borderRadius: "10px",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#262423",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "#6f6870",
+                }}
+              >
+                cm
+              </span>
+            </div>
+          </div>
+
+          {/* ==================================================
+              ALTURA CINTURA OMBROS
+              ================================================== */}
+          <div
+            style={{
+              marginBottom: "14px",
+            }}
+          >
+            <label
+              htmlFor="alturaCinturaOmbros"
+              style={{
+                display: "block",
+                marginBottom: "6px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#402b47",
+              }}
+            >
+              Tronco - cintura até ombros
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <input
+                id="alturaCinturaOmbros"
+                type="number"
+                min="1"
+                value={medidas.alturaCinturaOmbros}
+                onChange={(event) =>
+                  alterarMedida(
+                    "alturaCinturaOmbros",
+                    Number(event.target.value)
+                  )
+                }
+                onFocus={() =>
+                  setMedidaSelecionada("alturaCinturaOmbros")
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #ddd5df",
+                  borderRadius: "10px",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#262423",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "#6f6870",
+                }}
+              >
+                cm
+              </span>
+            </div>
           </div>
 
         </div>

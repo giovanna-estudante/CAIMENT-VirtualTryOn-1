@@ -16,6 +16,8 @@ import type {
 // ============================================================
 export const defaultUnisexMeasurements: UnisexMeasurements = {
   altura: 170,
+  alturaPeCintura: 100,
+  alturaCinturaOmbros: 45,
   ombros: 42,
   torax: 92,
   cintura: 76,

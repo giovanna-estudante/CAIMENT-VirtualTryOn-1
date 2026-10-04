@@ -1,4 +1,4 @@
-import { useState } from 'react'; 
+import { useState, useEffect } from 'react'; 
 import { DashboardLayout } from '@/components/layout/DashboardLayout'; 
 import { Card } from '@/components/ui/Card'; 
 import { Button } from '@/components/ui/Button'; 
@@ -7,49 +7,62 @@ import { useToast } from '@/components/ui/Toast';
 import { mockAvatar } from '@/data/mock/mockAvatar'; 
 import type { UnisexMeasurements } from '@/types/measurements'; 
 import { useAuth } from '@/context/AuthContext'; 
-import { saveMeasurements } from '@/services/firebase/measurements'; 
+import { saveMeasurements, getMeasurements } from '@/services/firebase/measurements'; 
 import { updateUserProfile } from '@/services/firebase/users';
 
-const defaultMeasurements: UnisexMeasurements = { 
-  altura: 168, 
-  ombros: 39, 
-  torax: 92, 
-  cintura: 74, 
-  quadril: 98, 
+const defaultMeasurements: UnisexMeasurements = {
+  altura: 168,
+  alturaPeCintura: 100,
+  alturaCinturaOmbros: 45,
+  ombros: 39,
+  torax: 92,
+  cintura: 74,
+  quadril: 98,
 };
 
-const measurementLabels: Record<keyof UnisexMeasurements, string> = { 
-  altura: 'Altura', 
-  ombros: 'Ombros', 
-  torax: 'Tórax', 
-  cintura: 'Cintura', 
-  quadril: 'Quadril', 
+const measurementLabels: Record<keyof UnisexMeasurements, string> = {
+  altura: 'Altura',
+  alturaPeCintura: 'Altura até a cintura',
+  alturaCinturaOmbros: 'Altura cintura até ombros',
+  ombros: 'Ombros',
+  torax: 'Tórax',
+  cintura: 'Cintura',
+  quadril: 'Quadril',
 };
 
-const measurementRanges: Record< keyof UnisexMeasurements, 
-{ min: number; max: number } > = 
-  { 
-    altura: { 
-    min: 140, 
-    max: 210 
-    }, 
-    ombros: { 
-      min: 30, 
-      max: 60 
-    }, 
-    torax: { 
-      min: 60, 
-      max: 140 
-    }, 
-    cintura: { 
-      min: 50, 
-      max: 130 
-    }, 
-    quadril: { 
-      min: 60, 
-      max: 150 
-    }, 
-  };
+const measurementRanges: Record<
+  keyof UnisexMeasurements,
+  { min: number; max: number }
+> = {
+  altura: {
+    min: 140,
+    max: 210,
+  },
+  alturaPeCintura: {
+    min: 70,
+    max: 140,
+  },
+  alturaCinturaOmbros: {
+    min: 30,
+    max: 70,
+  },
+  ombros: {
+    min: 30,
+    max: 60,
+  },
+  torax: {
+    min: 60,
+    max: 140,
+  },
+  cintura: {
+    min: 50,
+    max: 130,
+  },
+  quadril: {
+    min: 60,
+    max: 150,
+  },
+};
 
 export default function MeasurementsPage() {
   const [values, setValues] =
@@ -58,6 +71,50 @@ export default function MeasurementsPage() {
   const { show } = useToast();
 
   const { user } = useAuth();
+
+  useEffect(() => {
+    async function loadMeasurements() {
+      if (!user) return;
+
+      try {
+        const savedMeasurements =
+          await getMeasurements(user.uid);
+
+        if (!savedMeasurements) return;
+
+        setValues({
+          altura:
+            savedMeasurements.altura ??
+            defaultMeasurements.altura,
+          alturaPeCintura:
+            savedMeasurements.alturaPeCintura ??
+            defaultMeasurements.alturaPeCintura,
+          alturaCinturaOmbros:
+            savedMeasurements.alturaCinturaOmbros ??
+            defaultMeasurements.alturaCinturaOmbros,
+          ombros:
+            savedMeasurements.ombros ??
+            defaultMeasurements.ombros,
+          torax:
+            savedMeasurements.torax ??
+            defaultMeasurements.torax,
+          cintura:
+            savedMeasurements.cintura ??
+            defaultMeasurements.cintura,
+          quadril:
+            savedMeasurements.quadril ??
+            defaultMeasurements.quadril,
+        });
+      } catch (error) {
+        console.error(
+          'Erro ao carregar medidas:',
+          error
+        );
+      }
+    }
+
+    loadMeasurements();
+  }, [user]);
 
   // Atualiza uma medida enquanto o usuário movimenta o controle.
   const handleChange = (
@@ -78,7 +135,7 @@ export default function MeasurementsPage() {
     }
 
     try {
-      await saveMeasurements(user.uid, { medidas: values });
+      await saveMeasurements(user.uid,  values );
 
       await updateUserProfile(user.uid, {
         measurementsCompleted: true,

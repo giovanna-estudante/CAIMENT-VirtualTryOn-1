@@ -206,7 +206,7 @@ export default function AvatarPage() {
                   */}
                   <MeasurementCard
                     label="Altura"
-                    value={measurements.medidas.altura}
+                    value={measurements.altura}
                     unit="cm"
                   />
 
@@ -215,7 +215,7 @@ export default function AvatarPage() {
                   */}
                   <MeasurementCard
                     label="Ombros"
-                    value={measurements.medidas.ombros}
+                    value={measurements.ombros}
                     unit="cm"
                   />
 
@@ -224,7 +224,7 @@ export default function AvatarPage() {
                   */}
                   <MeasurementCard
                     label="Tórax"
-                    value={measurements.medidas.torax}
+                    value={measurements.torax}
                     unit="cm"
                   />
 
@@ -233,7 +233,7 @@ export default function AvatarPage() {
                   */}
                   <MeasurementCard
                     label="Cintura"
-                    value={measurements.medidas.cintura}
+                    value={measurements.cintura}
                     unit="cm"
                   />
                   
@@ -242,7 +242,25 @@ export default function AvatarPage() {
                   */}
                   <MeasurementCard
                     label="Quadril"
-                    value={measurements.medidas.quadril}
+                    value={measurements.quadril}
+                    unit="cm"
+                  />
+
+                  {/*
+                    Altura pés cintura 
+                  */}
+                  <MeasurementCard
+                    label="Pernas"
+                    value={measurements.alturaPeCintura}
+                    unit="cm"
+                  />
+
+                  {/*
+                    Altura cintura ombros
+                  */}
+                  <MeasurementCard
+                    label="Tronco"
+                    value={measurements.alturaCinturaOmbros}
                     unit="cm"
                   />
                 </>

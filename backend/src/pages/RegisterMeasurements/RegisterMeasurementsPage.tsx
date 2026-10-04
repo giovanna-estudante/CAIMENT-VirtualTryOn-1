@@ -40,6 +40,7 @@
 
 import {
   useState,
+  useEffect,
   type FormEvent,
 } from "react";
 
@@ -53,7 +54,10 @@ import { useAuth } from "@/context/AuthContext";
 
 import { useToast } from "@/components/ui/Toast";
 
-import { saveMeasurements } from "@/services/firebase/measurements";
+import {
+  getMeasurements,
+  saveMeasurements,
+} from "@/services/firebase/measurements";
 
 import { updateUserProfile } from "@/services/firebase/users";
 
@@ -106,11 +110,45 @@ export default function RegisterMeasurementsPage() {
   const [medidas, setMedidas] =
     useState<EditableMeasurements>({
       altura: 165,
+      alturaPeCintura: 100,
+      alturaCinturaOmbros: 45,
       ombros: 40,
       torax: 88,
       cintura: 70,
       quadril: 96,
     });
+
+    useEffect(() => {
+      async function carregarMedidas() {
+        if (!user) return;
+
+        try {
+          const medidasSalvas =
+            await getMeasurements(user.uid);
+
+          if (!medidasSalvas) return;
+
+          setMedidas({
+            altura: medidasSalvas.altura ?? 165,
+            alturaPeCintura:
+              medidasSalvas.alturaPeCintura ?? 100,
+            alturaCinturaOmbros:
+              medidasSalvas.alturaCinturaOmbros ?? 45,
+            ombros: medidasSalvas.ombros ?? 40,
+            torax: medidasSalvas.torax ?? 88,
+            cintura: medidasSalvas.cintura ?? 70,
+            quadril: medidasSalvas.quadril ?? 96,
+          });
+        } catch (error) {
+          console.error(
+            "Erro ao carregar medidas:",
+            error
+          );
+        }
+      }
+
+      carregarMedidas();
+    }, [user]);
 
   // ----------------------------------------------------------
   // ESTADO DE SALVAMENTO
@@ -186,9 +224,7 @@ export default function RegisterMeasurementsPage() {
       //
       await saveMeasurements(
         user.uid,
-        {
-          medidas,
-        }
+          medidas
       );
 
       // ------------------------------------------------------
@@ -410,11 +446,7 @@ export default function RegisterMeasurementsPage() {
             </div>
 
           </div>
-
-          {/* ==================================================
-              EDITOR CORPORAL
-              ================================================== */}
-
+          
           {/* ========================================================
               ÁREA PRINCIPAL DO EDITOR
               ======================================================== */}
@@ -438,6 +470,7 @@ export default function RegisterMeasurementsPage() {
             <div>
 
               <BodyEditor
+                medidasIniciais={medidas}
                 onChange={handleBodyChange}
               />
 

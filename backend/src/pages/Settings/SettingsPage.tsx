@@ -275,9 +275,7 @@ export default function SettingsPage() {
 
   const [measurements, setMeasurements] =
     useState<UserMeasurements>({
-      medidas: {
         ...defaultUnisexMeasurements,
-      },
     });
 
   const [loadingMeasurements, setLoadingMeasurements] =
@@ -400,8 +398,16 @@ export default function SettingsPage() {
         // colocamos os dados no estado da página.
 
         if (saved) {
+          const savedData = saved as UserMeasurements & {
+            medidas?: Partial<UserMeasurements>;
+          };
 
-          setMeasurements(saved);
+          const { medidas, ...rest } = savedData;
+
+          setMeasurements({
+            ...rest,
+            ...(medidas ?? {}),
+          });
         }
 
       } catch (error) {
@@ -433,23 +439,12 @@ export default function SettingsPage() {
     key: keyof EditableMeasurements,
     value: string,
   ) => {
-
     setMeasurements((previous) => ({
-
-      // Mantém o modelo corporal selecionado.
-
       ...previous,
-
-      // Atualiza somente a medida alterada.
-
-      medidas: {
-        ...previous.medidas,
-
-        [key]:
-          value === ''
-            ? 0
-            : Number(value),
-      },
+      [key]:
+        value === ''
+          ? 0
+          : Number(value),
     }));
   };
 
@@ -607,11 +602,11 @@ export default function SettingsPage() {
       // ======================================================
 
       const requiredMeasurements = [
-        measurements.medidas.altura,
-        measurements.medidas.ombros,
-        measurements.medidas.torax,
-        measurements.medidas.cintura,
-        measurements.medidas.quadril,
+        measurements.altura,
+        measurements.ombros,
+        measurements.torax,
+        measurements.cintura,
+        measurements.quadril,
       ];
 
       // Verifica se alguma medida está vazia,
@@ -962,7 +957,7 @@ export default function SettingsPage() {
                         type="number"
                         min="1"
                         value={
-                          measurements.medidas.altura ||
+                          measurements.altura ||
                           ''
                         }
                         onChange={(event) =>
@@ -989,7 +984,7 @@ export default function SettingsPage() {
                         type="number"
                         min="1"
                         value={
-                          measurements.medidas.ombros ||
+                          measurements.ombros ||
                           ''
                         }
                         onChange={(event) =>
@@ -1016,7 +1011,7 @@ export default function SettingsPage() {
                         type="number"
                         min="1"
                         value={
-                          measurements.medidas.torax ||
+                          measurements.torax ||
                           ''
                         }
                         onChange={(event) =>
@@ -1043,7 +1038,7 @@ export default function SettingsPage() {
                         type="number"
                         min="1"
                         value={
-                          measurements.medidas.cintura ||
+                          measurements.cintura ||
                           ''
                         }
                         onChange={(event) =>
@@ -1070,7 +1065,7 @@ export default function SettingsPage() {
                         type="number"
                         min="1"
                         value={
-                          measurements.medidas.quadril ||
+                          measurements.quadril ||
                           ''
                         }
                         onChange={(event) =>
@@ -1084,7 +1079,60 @@ export default function SettingsPage() {
                       />
 
                     </div>
+                    
+                    {/* ALTURA PÉ CINTURA */}
 
+                    <div>
+
+                      <label className="text-xs font-medium text-caiment-ink-soft">
+                        Pernas (considere do chão até sua cintura) (cm)
+                      </label>
+
+                      <input
+                        type="number"
+                        min="1"
+                        value={
+                          measurements.alturaPeCintura ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          updateMeasurement(
+                            'alturaPeCintura',
+                            event.target.value,
+                          )
+                        }
+                        placeholder="Ex.: 96"
+                        className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
+                      />
+
+                      {/* ALTURA CINTURA OMBROS */}
+
+                      <div>
+
+                        <label className="text-xs font-medium text-caiment-ink-soft">
+                          Tronco (considera da cintura até seus ombros) (cm)
+                        </label>
+
+                        <input
+                          type="number"
+                          min="1"
+                          value={
+                            measurements.alturaCinturaOmbros ||
+                            ''
+                          }
+                          onChange={(event) =>
+                            updateMeasurement(
+                              'alturaCinturaOmbros',
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Ex.: 46"
+                          className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
+                        />
+
+                      </div>
+
+                    </div>
                   </div>
 
                   {/* ==================================================
