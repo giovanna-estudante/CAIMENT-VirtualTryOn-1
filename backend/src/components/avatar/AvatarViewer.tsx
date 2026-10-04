@@ -650,7 +650,7 @@ function ClothingModel({
 
     // Ajusta a orientação da frente da roupa
     // para ficar voltada para a mesma direção do avatar.
-    group.rotation.y = Math.PI;
+    group.rotation.y = Math.PI / 2;
     group.updateMatrixWorld(true);
 
     console.log(
@@ -703,7 +703,7 @@ function ClothingModel({
      * com o modelo real.
      */
     const targetClothingHeight =
-      avatarFitData.size.y * 0.42;
+      avatarFitData.size.y * 0.36;
 
     const clothingScale =
       targetClothingHeight /
