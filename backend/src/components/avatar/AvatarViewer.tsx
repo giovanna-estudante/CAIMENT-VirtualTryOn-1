@@ -1,4 +1,3 @@
-// Importa recursos do React usados para estado, referências e efeitos.
 import {
   Suspense,
   useEffect,
@@ -6,27 +5,24 @@ import {
   useState,
 } from 'react';
 
-// Importa o Canvas e ferramentas do React Three Fiber.
 import {
   Canvas,
   useThree,
 } from '@react-three/fiber';
 
-// Importa controles de câmera e sombras do Drei.
 import {
   OrbitControls,
   ContactShadows,
 } from '@react-three/drei';
 
-// Importa o tipo dos controles da câmera.
 import type {
   OrbitControls as OrbitControlsImpl,
 } from 'three-stdlib';
 
-// Importa o tipo das medidas do usuário.
-import type { UserMeasurements } from '@/types/measurements';
+import type {
+  UserMeasurements,
+} from '@/types/measurements';
 
-// Importa recursos usados para manipular os modelos 3D.
 import {
   Box3,
   Vector3,
@@ -35,19 +31,16 @@ import {
   Object3D,
 } from 'three';
 
-// Carrega arquivos GLTF/GLB.
 import {
   GLTFLoader,
 } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-// Importa os ícones dos controles.
 import {
   RotateCcw,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
 
-// Importa componentes usados pelo visualizador.
 import {
   AvatarPlaceholderModel,
 } from './AvatarPlaceholderModel';
@@ -60,38 +53,20 @@ import {
   ErrorBoundary,
 } from '@/components/ui/ErrorBoundary';
 
-// ============================================================
-// PROPRIEDADES DO AVATAR VIEWER
-// ============================================================
-
 interface AvatarViewerProps {
-  /** URL do avatar 3D salvo. */
   modelUrl?: string | null;
-
-  /** URL da roupa 3D selecionada. */
   clothingModelUrl?: string | null;
-
-  /** Medidas cadastradas pelo usuário. */
   measurements?: UserMeasurements | null;
-
-  /** Classes adicionais do componente. */
   className?: string;
-
-  /** Define se os controles de câmera serão exibidos. */
   showControls?: boolean;
 }
 
-// ============================================================
-// PROXY DO MODELO TRIPO
-// ============================================================
+interface AvatarFitData {
+  box: Box3;
+  size: Vector3;
+  center: Vector3;
+}
 
-/**
- * Converte a URL original do modelo em uma URL
- * do backend do CAIMENT.
- *
- * Assim, o navegador não acessa diretamente
- * o servidor do Tripo.
- */
 function getModelProxyUrl(
   modelUrl: string
 ): string {
@@ -100,48 +75,37 @@ function getModelProxyUrl(
   )}`;
 }
 
-// ============================================================
-// AVATAR REAL
-// ============================================================
-
-/**
- * Responsável por carregar o avatar 3D real.
- */
 function RealModel({
   url,
   onLoaded,
   onError,
+  onFitData,
 }: {
   url: string;
   onLoaded?: () => void;
   onError?: (error: unknown) => void;
+  onFitData?: (data: AvatarFitData) => void;
 }) {
-  // Guarda o modelo depois que ele for carregado.
   const [model, setModel] =
     useState<Object3D | null>(null);
 
-  // Guarda as funções de retorno em referências.
   const onLoadedRef =
     useRef(onLoaded);
 
   const onErrorRef =
     useRef(onError);
 
-  // Mantém a referência da função de sucesso atualizada.
   useEffect(() => {
     onLoadedRef.current = onLoaded;
   }, [onLoaded]);
 
-  // Mantém a referência da função de erro atualizada.
   useEffect(() => {
     onErrorRef.current = onError;
   }, [onError]);
 
-  // Inicia o carregamento do avatar.
   useEffect(() => {
     let cancelled = false;
 
-    // Verifica se existe uma URL válida.
     if (!url) {
       console.error(
         '❌ URL do avatar está vazia.'
@@ -156,129 +120,59 @@ function RealModel({
       return;
     }
 
-    // Cria a URL usada pelo backend do CAIMENT.
     const proxyUrl =
       getModelProxyUrl(url);
 
-    // Mostra informações do carregamento no console.
-    console.log('');
     console.log(
-      '===================================='
-    );
-    console.log(
-      '🎯 CARREGANDO AVATAR PELO BACKEND'
-    );
-    console.log(
-      '===================================='
-    );
-
-    console.log(
-      '🌐 Endpoint:',
-      '/api/avatar/model'
-    );
-
-    console.log(
-      '🔗 Host do modelo original:',
-      (() => {
-        try {
-          return new URL(url)
-            .hostname;
-        } catch {
-          return 'URL inválida';
-        }
-      })()
-    );
-
-    console.log(
-      '📡 URL usada pelo GLTFLoader:',
+      '🎯 Carregando avatar:',
       proxyUrl
     );
 
-    // Cria o carregador GLTF.
     const loader =
       new GLTFLoader();
 
-    // Carrega o avatar.
     loader.load(
       proxyUrl,
 
-      // Quando o avatar termina de carregar.
       (gltf) => {
         if (cancelled) {
           return;
         }
 
-        console.log('');
-        console.log(
-          '===================================='
-        );
-        console.log(
-          '✅ AVATAR 3D CARREGADO!'
-        );
-        console.log(
-          '===================================='
-        );
-
-        // Mostra a cena carregada.
-        console.log(
-          'Cena:',
-          gltf.scene
-        );
-
-        // Conta as Meshes existentes no modelo.
         let meshCount = 0;
 
-        // Percorre todos os objetos do avatar.
         gltf.scene.traverse(
           (child) => {
             const mesh =
               child as Mesh;
 
-            // Trata somente objetos que são Mesh.
-            if (mesh.isMesh) {
-              meshCount++;
+            if (!mesh.isMesh) {
+              return;
+            }
 
-              // Garante que a Mesh fique visível.
-              mesh.visible = true;
+            meshCount++;
 
-              // Permite que ela projete sombras.
-              mesh.castShadow = true;
+            mesh.visible = true;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
 
-              // Permite que ela receba sombras.
-              mesh.receiveShadow = true;
+            if (mesh.material) {
+              const materials =
+                Array.isArray(mesh.material)
+                  ? mesh.material
+                  : [mesh.material];
 
-              // Garante que os materiais fiquem visíveis.
-              if (mesh.material) {
-                const materials =
-                  Array.isArray(
-                    mesh.material
-                  )
-                    ? mesh.material
-                    : [mesh.material];
-
-                materials.forEach(
-                  (material) => {
-                    material.visible = true;
-                    material.needsUpdate = true;
-                  }
-                );
-              }
+              materials.forEach(
+                (material) => {
+                  material.visible = true;
+                  material.needsUpdate = true;
+                }
+              );
             }
           }
         );
 
-        // Mostra quantas Meshes foram encontradas.
-        console.log(
-          '🧩 Meshes encontradas:',
-          meshCount
-        );
-
-        // Verifica se o arquivo realmente possui Meshes.
         if (meshCount === 0) {
-          console.error(
-            '❌ O modelo foi carregado, mas não possui meshes.'
-          );
-
           onErrorRef.current?.(
             new Error(
               'O modelo 3D não possui meshes.'
@@ -288,108 +182,60 @@ function RealModel({
           return;
         }
 
-        // Guarda a cena carregada.
         setModel(gltf.scene);
 
-        // Informa que o avatar está pronto.
         console.log(
-          '🎉 Avatar pronto para visualizar!'
+          '✅ Avatar 3D carregado.'
         );
 
         onLoadedRef.current?.();
       },
 
-      // Mostra o progresso do carregamento.
-      (progress) => {
-        if (progress.total > 0) {
-          const percent =
-            Math.round(
-              (progress.loaded /
-                progress.total) *
-                100
-            );
+      undefined,
 
-          console.log(
-            `📥 Avatar: ${percent}%`
-          );
-        }
-      },
-
-      // Trata erros no carregamento.
       (error) => {
         if (cancelled) {
           return;
         }
 
-        console.error('');
         console.error(
-          '===================================='
-        );
-        console.error(
-          '❌ ERRO AO CARREGAR AVATAR 3D'
-        );
-        console.error(
-          '===================================='
-        );
-
-        console.error(
-          'Endpoint usado:',
-          '/api/avatar/model'
-        );
-
-        console.error(
-          'URL do proxy:',
-          proxyUrl
-        );
-
-        console.error(
-          'Erro:',
+          '❌ Erro ao carregar avatar:',
           error
         );
 
-        onErrorRef.current?.(
-          error
-        );
+        onErrorRef.current?.(error);
       }
     );
 
-    // Cancela atualizações quando o componente sai da tela.
     return () => {
       cancelled = true;
     };
   }, [url]);
 
-  // Enquanto o modelo não existir, não renderiza nada.
   if (!model) {
     return null;
   }
 
-  // Envia o modelo para o componente que prepara seu tamanho.
   return (
     <AvatarModelObject
       model={model}
+      onFitData={onFitData}
     />
   );
 }
 
-// ============================================================
-// PREPARAÇÃO DO AVATAR
-// ============================================================
-
-/**
- * Centraliza o avatar e define sua altura
- * dentro da cena 3D.
- */
 function AvatarModelObject({
   model,
+  onFitData,
 }: {
   model: Object3D;
+  onFitData?: (
+    data: AvatarFitData
+  ) => void;
 }) {
-  // Referência ao grupo que envolve o avatar.
   const groupRef =
     useRef<Group | null>(null);
 
-  // Ajusta o modelo quando ele estiver disponível.
   useEffect(() => {
     const group =
       groupRef.current;
@@ -398,348 +244,181 @@ function AvatarModelObject({
       return;
     }
 
-    // Atualiza as transformações antes de medir.
+    group.scale.setScalar(1);
+    group.position.set(0, 0, 0);
+
     group.updateMatrixWorld(true);
 
-    // Calcula os limites do avatar.
-    const box =
-      new Box3().setFromObject(
-        group
-      );
+    const originalBox =
+      new Box3().setFromObject(group);
 
-    // Guarda as dimensões do avatar.
-    const size =
+    const originalSize =
       new Vector3();
 
-    box.getSize(size);
+    originalBox.getSize(
+      originalSize
+    );
 
-    // Mostra as dimensões no console.
     console.log(
-      '📐 Tamanho do avatar:',
+      '📐 Avatar original:',
       {
-        x: size.x,
-        y: size.y,
-        z: size.z,
+        x: originalSize.x,
+        y: originalSize.y,
+        z: originalSize.z,
       }
     );
 
-    // Define a altura desejada para o avatar.
-    const targetHeight =
-      3.4;
+    const targetHeight = 3.4;
 
-    // Só redimensiona se a altura for válida.
-    if (size.y > 0) {
-      const scale =
-        targetHeight /
-        size.y;
-
-      // Mantém a proporção do corpo.
-      group.scale.setScalar(
-        scale
+    if (originalSize.y <= 0) {
+      console.error(
+        '❌ Altura do avatar inválida.'
       );
+
+      return;
     }
 
-    // Atualiza as transformações depois da escala.
-    group.updateMatrixWorld(
-      true
-    );
+    const scale =
+      targetHeight /
+      originalSize.y;
 
-    // Mede novamente o avatar.
+    group.scale.setScalar(scale);
+
+    group.updateMatrixWorld(true);
+
     const scaledBox =
-      new Box3().setFromObject(
-        group
-      );
+      new Box3().setFromObject(group);
 
-    // Descobre o centro do avatar.
-    const center =
+    const scaledCenter =
       new Vector3();
 
     scaledBox.getCenter(
-      center
+      scaledCenter
     );
 
-    // Centraliza horizontalmente.
     group.position.x =
-      -center.x;
+      -scaledCenter.x;
 
-    // Centraliza no eixo Z.
     group.position.z =
-      -center.z;
+      -scaledCenter.z;
 
-    // Coloca a base do avatar no chão.
     group.position.y =
       -scaledBox.min.y;
 
-    group.updateMatrixWorld(
-      true
+    group.updateMatrixWorld(true);
+
+    const finalBox =
+      new Box3().setFromObject(group);
+
+    const finalSize =
+      new Vector3();
+
+    const finalCenter =
+      new Vector3();
+
+    finalBox.getSize(
+      finalSize
+    );
+
+    finalBox.getCenter(
+      finalCenter
     );
 
     console.log(
-      '✅ Avatar posicionado.'
+      '📐 Avatar final:',
+      {
+        tamanho: {
+          x: finalSize.x,
+          y: finalSize.y,
+          z: finalSize.z,
+        },
+        centro: {
+          x: finalCenter.x,
+          y: finalCenter.y,
+          z: finalCenter.z,
+        },
+      }
     );
-  }, [model]);
+
+    onFitData?.({
+      box: finalBox,
+      size: finalSize,
+      center: finalCenter,
+    });
+  }, [model, onFitData]);
 
   return (
     <group ref={groupRef}>
-      <primitive
-        object={model}
-      />
+      <primitive object={model} />
     </group>
   );
 }
 
-// ============================================================
-// ROUPA
-// ============================================================
-
-/**
- * Carrega e posiciona a roupa 3D.
- *
- * As medidas do usuário controlam as Shape Keys
- * compatíveis com o perfil de medidas.
- */
 function ClothingModel({
   url,
   measurements,
+  avatarFitData,
 }: {
   url: string;
   measurements?: UserMeasurements | null;
+  avatarFitData: AvatarFitData;
 }) {
-  // Guarda a roupa carregada.
   const [model, setModel] =
-    useState<Object3D | null>(
-      null
-    );
+    useState<Object3D | null>(null);
 
-  // Carrega o arquivo GLB da roupa.
+  const groupRef =
+    useRef<Group | null>(null);
+
   useEffect(() => {
+    let cancelled = false;
+
     const loader =
       new GLTFLoader();
 
     loader.load(
       url,
 
-      // Executado quando a roupa termina de carregar.
       (gltf) => {
+        if (cancelled) {
+          return;
+        }
 
         console.log(
-          '===================================='
-        );
-        console.log(
-          '✅ Roupa carregada.'
-        );
-        console.log(
-          '===================================='
+          '👕 Roupa carregada.'
         );
 
-        // Percorre as partes da roupa.
         gltf.scene.traverse(
           (child) => {
             const mesh =
               child as Mesh;
 
-            // Trata somente objetos que são Mesh.
-            if (mesh.isMesh) {
-              // Garante que a roupa fique visível.
-              mesh.visible = true;
+            if (!mesh.isMesh) {
+              return;
+            }
 
-              // Permite que a roupa projete sombras.
-              mesh.castShadow = true;
+            mesh.visible = true;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
 
-              // Permite que a roupa receba sombras.
-              mesh.receiveShadow = true;
-
-              // Verifica se esta Mesh possui Shape Keys.
-              if (mesh.morphTargetDictionary) {
-                // Mostra os nomes das Shape Keys existentes na camiseta.
-                console.log(
-                  "🎯 SHAPE KEYS DA ROUPA:",
-                  Object.keys(mesh.morphTargetDictionary)
-                );
-
-                // Mostra também o índice de cada Shape Key.
-                console.log(
-                  "🎯 ÍNDICES DAS SHAPE KEYS:",
+            if (
+              mesh.morphTargetDictionary &&
+              mesh.morphTargetInfluences
+            ) {
+              console.log(
+                '🎯 Shape Keys:',
+                Object.keys(
                   mesh.morphTargetDictionary
-                );
-
-                if (
-                  mesh.morphTargetDictionary &&
-                  mesh.morphTargetInfluences &&
-                  measurements
-                ) {
-                  // ============================================================
-                  // FUNÇÃO PARA CONVERTER UMA MEDIDA EM INFLUÊNCIA
-                  // ============================================================
-                  //
-                  // As Shape Keys trabalham normalmente entre 0 e 1.
-                  // As medidas do usuário estão em centímetros.
-                  //
-                  // Esta função transforma uma medida em um valor entre 0 e 1.
-                  // Os limites ainda são provisórios e serão ajustados depois
-                  // de testarmos a modelagem da camiseta.
-                  // ============================================================
-
-                  const calcularInfluence = (
-                    medida: number,
-                    minimo: number,
-                    maximo: number
-                  ) => {
-                    const valor =
-                      (medida - minimo) /
-                      (maximo - minimo);
-
-                    return Math.max(
-                      0,
-                      Math.min(1, valor)
-                    );
-                  };
-
-                  //=========================================
-                  // CINTURA
-                  //=========================================
-                  const cinturaIndex = mesh.morphTargetDictionary["Cintura"];
-
-                  if (cinturaIndex !== undefined && measurements.medidas.cintura !== undefined) {
-                    const influence = calcularInfluence(
-                      measurements.medidas.cintura,
-                      60,
-                      100
-                    );
-
-                    mesh.morphTargetInfluences[cinturaIndex] = influence;
-                  }
-
-                  //=========================================
-                  // TÓRAX
-                  //=========================================
-                  const toraxIndex = mesh.morphTargetDictionary["Tórax"];
-
-                  if (toraxIndex !== undefined && measurements.medidas.torax !== undefined) {
-                    const influence = calcularInfluence(
-                      measurements.medidas.torax,
-                      70,
-                      120
-                    );
-
-                    mesh.morphTargetInfluences[toraxIndex] = influence;
-                  }
-
-                  //=========================================
-                  // OMBROS
-                  //=========================================
-                  const ombrosIndex = mesh.morphTargetDictionary["Ombros"];
-
-                  if (ombrosIndex !== undefined && measurements.medidas.ombros !== undefined) {
-                    const influence = calcularInfluence(
-                      measurements.medidas.ombros,
-                      30,
-                      55
-                    );
-
-                    mesh.morphTargetInfluences[ombrosIndex] = influence;
-                  }
-
-                  //=========================================
-                  // COMPRIMENTO
-                  //=========================================
-                  const comprimentoIndex =
-                    mesh.morphTargetDictionary["Comprimento"];
-
-                  if (comprimentoIndex !== undefined && measurements.medidas.altura !== undefined) {
-                    const influence = calcularInfluence(
-                      measurements.medidas.altura,
-                      150,
-                      190
-                    );
-
-                    mesh.morphTargetInfluences[comprimentoIndex] = influence;
-                  }
-
-                  //=========================================
-                  // MANGA
-                  //=========================================
-                  const mangaIndex = mesh.morphTargetDictionary["Manga"];
-
-                  if (mangaIndex !== undefined) {
-                    mesh.morphTargetInfluences[mangaIndex] = 0;
-                  }
-
-                  //=========================================
-                  // GOLA
-                  //=========================================
-                  const golaIndex = mesh.morphTargetDictionary["Gola"];
-
-                  if (golaIndex !== undefined) {
-                    mesh.morphTargetInfluences[golaIndex] = 0;
-                  }
-
-                  //=========================================
-                  // CAIMENTO
-                  //=========================================
-                  const caimentoIndex =
-                    mesh.morphTargetDictionary["Caimento"];
-
-                  if (caimentoIndex !== undefined) {
-                    mesh.morphTargetInfluences[caimentoIndex] = 0;
-                  }
-
-                  //=========================================
-                  // BARRA
-                  //=========================================
-                  const barraIndex =
-                    mesh.morphTargetDictionary["Barra"];
-
-                  if (barraIndex !== undefined) {
-                    mesh.morphTargetInfluences[barraIndex] = 0;
-                  }
-
-                  //=========================================
-                  // AJUSTE LATERAL
-                  //=========================================
-                  const ajusteLateralIndex =
-                    mesh.morphTargetDictionary["Ajuste lateral"];
-
-                  if (ajusteLateralIndex !== undefined) {
-                    mesh.morphTargetInfluences[ajusteLateralIndex] = 0;
-                  }
-
-                  //=========================================
-                  // MANGA_FINAL
-                  //=========================================
-                  const mangaFinalIndex =
-                    mesh.morphTargetDictionary["Manga_Final"];
-
-                  if (mangaFinalIndex !== undefined) {
-                    mesh.morphTargetInfluences[mangaFinalIndex] = 0;
-                  }
-
-                  //=========================================
-                  // FRENTE_COSTAS
-                  //=========================================
-                  const frenteCostasIndex =
-                    mesh.morphTargetDictionary["Frente_Costas"];
-
-                  if (frenteCostasIndex !== undefined) {
-                    mesh.morphTargetInfluences[frenteCostasIndex] = 0;
-                  }
-                }
-
-              }
+                )
+              );
             }
           }
         );
 
-        // Guarda a roupa carregada.
-        setModel(
-          gltf.scene
-        );
+        setModel(gltf.scene);
       },
 
-      // Não precisamos acompanhar o progresso da roupa neste momento.
       undefined,
 
-      // Trata erros no carregamento da roupa.
       (error) => {
         console.error(
           '❌ Erro ao carregar roupa:',
@@ -747,205 +426,413 @@ function ClothingModel({
         );
       }
     );
-  }, [url, measurements]);
 
-  // Referência ao grupo que controla a roupa.
-  const groupRef =
-    useRef<Group | null>(null);
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
 
-  // Posiciona a roupa depois que ela foi carregada.
   useEffect(() => {
-    // ============================================================
-    // 1. VERIFICA SE O MODELO DA ROUPA JÁ ESTÁ DISPONÍVEL
-    // ============================================================
+    const group =
+      groupRef.current;
 
-    console.log("👕 1 - EFFECT DA ROUPA EXECUTOU", {
-      temGrupo: !!groupRef.current,
-      temModelo: !!model,
-    });
-
-    const group = groupRef.current;
-
-    // Se a roupa ainda não foi carregada, não fazemos nenhum cálculo.
     if (!group || !model) {
-      console.log("👕 2 - PAROU: sem group ou model");
       return;
     }
-
-    console.log("👕 3 - GROUP E MODEL OK");
-
-    // ============================================================
-    // 2. CALCULA O TAMANHO ORIGINAL DA ROUPA
-    // ============================================================
-    //
-    // O Box3 cria uma "caixa imaginária" ao redor da camiseta.
-    // Isso permite descobrir largura, altura e profundidade
-    // reais do modelo 3D.
-    // ============================================================
-
-    const box = new Box3().setFromObject(group);
-
-    console.log("👕 4 - BOX CALCULADO", box);
-
-    const size = new Vector3();
-    const center = new Vector3();
-
-    // Obtém as dimensões da caixa da roupa.
-    box.getSize(size);
-
-    // Obtém o ponto central da roupa.
-    box.getCenter(center);
-
-    console.log("👕 5 - TAMANHO DA ROUPA", {
-      x: size.x,
-      y: size.y,
-      z: size.z,
-    });
-
-    console.log("👕 6 - CENTRO DA ROUPA", {
-      x: center.x,
-      y: center.y,
-      z: center.z,
-    });
-
-    // ============================================================
-    // 3. VERIFICA SE A ALTURA DA ROUPA É VÁLIDA
-    // ============================================================
-
-    if (size.z <= 0) {
-      console.log(
-        "👕 7 - PAROU: altura da roupa inválida"
-      );
-
-      return;
-    }
-
-    console.log("👕 8 - VAI ESCALAR A ROUPA");
-
-    // ============================================================
-    // 4. AJUSTA A ALTURA DA ROUPA
-    // ============================================================
-    //
-    // Por enquanto estamos usando uma altura de teste.
-    // Depois vamos substituir esse valor por um cálculo baseado
-    // no avatar e nas medidas do usuário.
-    // ============================================================
-
-    const targetHeight = 1.65;
-
-    group.scale.setScalar(
-      targetHeight / size.z
-    );
-
-    // Atualiza os cálculos internos do Three.js depois da escala.
-    group.updateMatrixWorld(true);
-
-    // ============================================================
-    // VERIFICA O TAMANHO DA ROUPA DEPOIS DAS SHAPE KEYS
-    // ============================================================
-    //
-    // Aqui medimos novamente a camiseta depois que as Shape Keys
-    // já foram aplicadas. Assim conseguimos saber se a geometria
-    // realmente foi modificada antes da escala final.
-    // ============================================================
-
-    const shapeKeyBox =
-      new Box3().setFromObject(group);
-
-    const shapeKeySize =
-      new Vector3();
-
-    shapeKeyBox.getSize(shapeKeySize);
 
     console.log(
-      "👕 TAMANHO APÓS SHAPE KEYS",
-      {
-        x: shapeKeySize.x,
-        y: shapeKeySize.y,
-        z: shapeKeySize.z,
+      '===================================='
+    );
+
+    console.log(
+      '👕 INICIANDO ENCAIXE DA ROUPA'
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    /*
+     * Sempre começa do tamanho original.
+     * Isso evita acumular escala quando
+     * as medidas mudarem.
+     */
+    group.scale.setScalar(1);
+
+    group.position.set(0, 0, 0);
+
+    group.rotation.set(0, 0, 0);
+
+    group.updateMatrixWorld(true);
+
+    /*
+     * Aplica as Shape Keys antes de medir
+     * a camiseta.
+     */
+    model.traverse(
+      (child) => {
+        const mesh =
+          child as Mesh;
+
+        if (
+          !mesh.isMesh ||
+          !mesh.morphTargetDictionary ||
+          !mesh.morphTargetInfluences
+        ) {
+          return;
+        }
+
+        const dictionary =
+          mesh.morphTargetDictionary;
+
+        const influences =
+          mesh.morphTargetInfluences;
+
+        const calcularInfluence = (
+          medida: number,
+          minimo: number,
+          maximo: number
+        ) => {
+          if (maximo <= minimo) {
+            return 0;
+          }
+
+          const valor =
+            (medida - minimo) /
+            (maximo - minimo);
+
+          return Math.max(
+            0,
+            Math.min(1, valor)
+          );
+        };
+
+        /*
+         * Zera primeiro todas as Shape Keys
+         * que ainda não possuem calibração.
+         */
+        const shapeKeysZero = [
+          'Manga',
+          'Gola',
+          'Caimento',
+          'Barra',
+          'Ajuste lateral',
+          'Manga_Final',
+          'Frente_Costas',
+          'Comprimento',
+        ];
+
+        shapeKeysZero.forEach(
+          (key) => {
+            const index =
+              dictionary[key];
+
+            if (index !== undefined) {
+              influences[index] = 0;
+            }
+          }
+        );
+
+        if (!measurements) {
+          return;
+        }
+
+        /*
+         * Cintura
+         */
+        const cinturaIndex =
+          dictionary['Cintura'];
+
+        if (
+          cinturaIndex !== undefined &&
+          measurements.medidas.cintura !==
+            undefined
+        ) {
+          influences[cinturaIndex] =
+            calcularInfluence(
+              measurements.medidas.cintura,
+              60,
+              100
+            );
+        }
+
+        /*
+         * Tórax
+         */
+        const toraxIndex =
+          dictionary['Tórax'];
+
+        if (
+          toraxIndex !== undefined &&
+          measurements.medidas.torax !==
+            undefined
+        ) {
+          influences[toraxIndex] =
+            calcularInfluence(
+              measurements.medidas.torax,
+              70,
+              120
+            );
+        }
+
+        /*
+         * Ombros
+         */
+        const ombrosIndex =
+          dictionary['Ombros'];
+
+        if (
+          ombrosIndex !== undefined
+        ) {
+          influences[ombrosIndex] =
+            calcularInfluence(
+              measurements.medidas.ombros,
+              30,
+              55
+            );
+        }
+
+        console.log(
+          '🎯 Shape Keys aplicadas:',
+          {
+            Cintura:
+              cinturaIndex !== undefined
+                ? influences[cinturaIndex]
+                : 0,
+
+            Tórax:
+              toraxIndex !== undefined
+                ? influences[toraxIndex]
+                : 0,
+
+            Ombros:
+              ombrosIndex !== undefined
+                ? influences[ombrosIndex]
+                : 0,
+          }
+        );
       }
     );
 
-    console.log("👕 9 - ROUPA ESCALADA");
+    /*
+     * Atualiza as transformações depois
+     * das Shape Keys.
+     */
+    group.updateMatrixWorld(true);
 
-    // ============================================================
-    // 5. CALCULA NOVAMENTE O TAMANHO APÓS A ESCALA
-    // ============================================================
+    /*
+     * Mede a camiseta já deformada.
+     */
+    const box =
+      new Box3().setFromObject(group);
 
+    const size =
+      new Vector3();
+
+    box.getSize(size);
+
+    console.log(
+      '👕 Tamanho após Shape Keys:',
+      {
+        x: size.x,
+        y: size.y,
+        z: size.z,
+      }
+    );
+
+    /*
+     * Seu modelo foi criado no Blender
+     * com Z como altura.
+     *
+     * Se o GLB chegar ao Three.js ainda
+     * com Z como eixo vertical, convertemos
+     * para Y-up.
+     */
+    if (
+      size.z > size.y * 1.3
+    ) {
+      group.rotation.x =
+        -Math.PI / 2;
+
+      group.updateMatrixWorld(true);
+
+      console.log(
+        '🔄 Roupa convertida de Z-up para Y-up.'
+      );
+    }
+
+    /*
+     * Mede novamente depois da
+     * possível rotação.
+     */
+    const orientedBox =
+      new Box3().setFromObject(group);
+
+    const orientedSize =
+      new Vector3();
+
+    orientedBox.getSize(
+      orientedSize
+    );
+
+    const orientedCenter =
+      new Vector3();
+
+    orientedBox.getCenter(
+      orientedCenter
+    );
+
+    console.log(
+      '👕 Tamanho no eixo do Viewer:',
+      {
+        x: orientedSize.x,
+        y: orientedSize.y,
+        z: orientedSize.z,
+      }
+    );
+
+    if (orientedSize.y <= 0) {
+      console.error(
+        '❌ Altura da roupa inválida.'
+      );
+
+      return;
+    }
+
+    /*
+     * A camiseta ocupa aproximadamente
+     * 42% da altura do avatar.
+     *
+     * Esse valor será calibrado depois
+     * com o modelo real.
+     */
+    const targetClothingHeight =
+      avatarFitData.size.y * 0.42;
+
+    const clothingScale =
+      targetClothingHeight /
+      orientedSize.y;
+
+    group.scale.setScalar(
+      clothingScale
+    );
+
+    group.updateMatrixWorld(true);
+
+    /*
+     * Mede a camiseta depois da escala.
+     */
     const scaledBox =
       new Box3().setFromObject(group);
 
-    const scaledCenter = new Vector3();
+    const scaledSize =
+      new Vector3();
 
-    scaledBox.getCenter(scaledCenter);
+    const scaledCenter =
+      new Vector3();
 
-    console.log("👕 10 - CENTRO APÓS ESCALA", {
-      x: scaledCenter.x,
-      y: scaledCenter.y,
-      z: scaledCenter.z,
-    });
+    scaledBox.getSize(
+      scaledSize
+    );
 
-    // ============================================================
-    // 6. CENTRALIZA A ROUPA NO AVATAR
-    // ============================================================
-    //
-    // X e Z centralizam a camiseta horizontalmente.
-    // Y coloca a camiseta na altura definida atualmente.
-    //
-    // Esses valores ainda são provisórios.
-    // Vamos substituí-los depois por um posicionamento baseado
-    // no corpo do avatar.
-    // ============================================================
+    scaledBox.getCenter(
+      scaledCenter
+    );
 
-    group.position.x = -scaledCenter.x;
-
-    group.position.y = -scaledCenter.y;
+    /*
+     * Centraliza a camiseta no mesmo
+     * eixo horizontal do avatar.
+     */
+    group.position.x =
+      avatarFitData.center.x -
+      scaledCenter.x;
 
     group.position.z =
-      0.95 - scaledCenter.z;
+      avatarFitData.center.z -
+      scaledCenter.z;
 
-    // Pequeno ajuste provisório para a profundidade.
-    group.position.y += 0.08;
+    /*
+     * Centro aproximado do tórax.
+     *
+     * Depois vamos trocar esse valor
+     * por uma referência corporal real.
+     */
+    const chestHeight =
+      avatarFitData.box.min.y +
+      avatarFitData.size.y * 0.68;
 
-    console.log("👕 11 - ROUPA POSICIONADA", {
-      x: group.position.x,
-      y: group.position.y,
-      z: group.position.z,
-    });
+    group.position.y =
+      chestHeight -
+      scaledCenter.y;
 
-    // ============================================================
-    // 7. CONFIRMA SE AS MEDIDAS DO USUÁRIO FORAM RECEBIDAS
-    // ============================================================
+    group.updateMatrixWorld(true);
+
+    /*
+     * Mede a roupa na posição final.
+     */
+    const finalClothingBox =
+      new Box3().setFromObject(group);
+
+    const finalClothingSize =
+      new Vector3();
+
+    finalClothingBox.getSize(
+      finalClothingSize
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '👕 ROUPA VESTIDA NO AVATAR'
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      'Tamanho final:',
+      {
+        x: finalClothingSize.x,
+        y: finalClothingSize.y,
+        z: finalClothingSize.z,
+      }
+    );
+
+    console.log(
+      'Posição:',
+      {
+        x: group.position.x,
+        y: group.position.y,
+        z: group.position.z,
+      }
+    );
 
     if (measurements) {
       console.log(
-        "📏 Medidas recebidas pela roupa:",
-        measurements
+        '📏 Medidas usadas:',
+        measurements.medidas
       );
     }
-  }, [model, measurements]);
+  }, [
+    model,
+    measurements,
+    avatarFitData,
+  ]);
 
-  // Enquanto a roupa não carregar, não renderiza nada.
   if (!model) {
     return null;
   }
 
   return (
     <group ref={groupRef}>
-      <primitive
-        object={model}
-      />
+      <primitive object={model} />
     </group>
   );
 }
 
-// ============================================================
-// CENA
-// ============================================================
-
-/**
- * Monta todos os elementos da cena 3D.
- */
 function Scene({
   modelUrl,
   clothingModelUrl,
@@ -959,9 +846,15 @@ function Scene({
   onAvatarLoaded: () => void;
   onAvatarError: () => void;
 }) {
+  const [
+    avatarFitData,
+    setAvatarFitData,
+  ] = useState<AvatarFitData | null>(
+    null
+  );
+
   return (
     <>
-      {/* Luz principal da cena. */}
       <hemisphereLight
         args={[
           '#F4F1FC',
@@ -970,80 +863,53 @@ function Scene({
         ]}
       />
 
-      {/* Iluminação geral. */}
-      <ambientLight
-        intensity={0.4}
-      />
+      <ambientLight intensity={0.4} />
 
-      {/* Luz principal com sombras. */}
       <directionalLight
-        position={[
-          3,
-          5,
-          4,
-        ]}
+        position={[3, 5, 4]}
         intensity={1.2}
         castShadow
       />
 
-      {/* Segunda luz para diminuir áreas escuras. */}
       <directionalLight
-        position={[
-          -3,
-          2,
-          -3,
-        ]}
+        position={[-3, 2, -3]}
         intensity={0.4}
       />
 
-      {/* Luz adicional. */}
       <pointLight
-        position={[
-          0,
-          2.5,
-          -2,
-        ]}
+        position={[0, 2.5, -2]}
         intensity={0.3}
         color="#C6F24E"
       />
 
-      {/* Modelos que podem carregar de forma assíncrona. */}
       <Suspense fallback={null}>
-        {/* Carrega o avatar real quando existe uma URL. */}
         {modelUrl ? (
           <RealModel
             url={modelUrl}
-            onLoaded={
-              onAvatarLoaded
-            }
-            onError={
-              onAvatarError
+            onLoaded={onAvatarLoaded}
+            onError={onAvatarError}
+            onFitData={
+              setAvatarFitData
             }
           />
         ) : (
           <AvatarPlaceholderModel />
         )}
 
-        {/* Carrega a roupa quando existe uma URL. */}
-        {clothingModelUrl && (
-          <ClothingModel
-            url={
-              clothingModelUrl
-            }
-            measurements={
-              measurements
-            }
-          />
-        )}
+        {clothingModelUrl &&
+          avatarFitData && (
+            <ClothingModel
+              url={clothingModelUrl}
+              measurements={measurements}
+              avatarFitData={
+                avatarFitData
+              }
+            />
+          )}
       </Suspense>
 
-      {/* Sombra abaixo dos modelos. */}
       <ContactShadows
-        position={[
-          0,
-          -1.55,
-          0,
-        ]}
+        position={[0, 0, 0]}
         opacity={0.35}
         scale={4}
         blur={2.4}
@@ -1053,26 +919,17 @@ function Scene({
   );
 }
 
-// ============================================================
-// CÂMERA
-// ============================================================
-
-/**
- * Define a posição inicial da câmera.
- */
 function CameraController() {
   const { camera } =
     useThree();
 
   useEffect(() => {
-    // Define a posição inicial.
     camera.position.set(
       0,
       0.35,
       5.2
     );
 
-    // Faz a câmera olhar para o avatar.
     camera.lookAt(
       0,
       0.15,
@@ -1083,13 +940,6 @@ function CameraController() {
   return null;
 }
 
-// ============================================================
-// VIEWER
-// ============================================================
-
-/**
- * Componente principal do visualizador 3D.
- */
 export function AvatarViewer({
   modelUrl,
   clothingModelUrl,
@@ -1097,21 +947,17 @@ export function AvatarViewer({
   className,
   showControls = true,
 }: AvatarViewerProps) {
-  // Referência aos controles da câmera.
   const controlsRef =
     useRef<OrbitControlsImpl | null>(
       null
     );
 
-  // Indica se o avatar terminou de carregar.
   const [ready, setReady] =
     useState(false);
 
-  // Indica se ocorreu erro no avatar.
   const [modelError, setModelError] =
     useState(false);
 
-  // Reinicia o estado quando a URL do avatar muda.
   useEffect(() => {
     console.log(
       '🖼️ AvatarViewer modelUrl:',
@@ -1122,12 +968,10 @@ export function AvatarViewer({
     setReady(false);
   }, [modelUrl]);
 
-  // Reseta a câmera.
   const handleReset = () => {
     controlsRef.current?.reset();
   };
 
-  // Controla o zoom da câmera.
   const handleZoom = (
     dir: 1 | -1
   ) => {
@@ -1141,7 +985,6 @@ export function AvatarViewer({
     const camera =
       controls.object;
 
-    // Aproxima ou afasta a câmera.
     const factor =
       dir === 1
         ? 0.85
@@ -1156,7 +999,7 @@ export function AvatarViewer({
 
   console.log(
     '👕 URL DA ROUPA:',
-       clothingModelUrl
+    clothingModelUrl
   );
 
   return (
@@ -1165,7 +1008,6 @@ export function AvatarViewer({
         className ?? ''
       }`}
     >
-      {/* Tela de carregamento. */}
       {!ready &&
         !modelError && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
@@ -1175,7 +1017,6 @@ export function AvatarViewer({
           </div>
         )}
 
-      {/* Mensagem de erro. */}
       {modelError ? (
         <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 p-6 text-center">
           <div className="text-3xl">
@@ -1204,7 +1045,6 @@ export function AvatarViewer({
             </div>
           }
         >
-          {/* Espaço 3D onde avatar e roupa serão renderizados. */}
           <Canvas
             shadows
             camera={{
@@ -1221,14 +1061,10 @@ export function AvatarViewer({
               );
             }}
           >
-            {/* Configura a câmera. */}
             <CameraController />
 
-            {/* Envia os dados para a cena. */}
             <Scene
-              modelUrl={
-                modelUrl
-              }
+              modelUrl={modelUrl}
               clothingModelUrl={
                 clothingModelUrl
               }
@@ -1251,7 +1087,6 @@ export function AvatarViewer({
               }}
             />
 
-            {/* Controles de rotação e distância. */}
             <OrbitControls
               ref={controlsRef}
               makeDefault
@@ -1274,11 +1109,9 @@ export function AvatarViewer({
         </ErrorBoundary>
       )}
 
-      {/* Botões de controle. */}
       {showControls &&
         !modelError && (
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full glass px-2 py-2">
-            {/* Diminuir zoom. */}
             <button
               onClick={() =>
                 handleZoom(-1)
@@ -1289,7 +1122,6 @@ export function AvatarViewer({
               <ZoomOut size={15} />
             </button>
 
-            {/* Resetar câmera. */}
             <button
               onClick={
                 handleReset
@@ -1297,12 +1129,9 @@ export function AvatarViewer({
               aria-label="Resetar câmera"
               className="flex h-8 w-8 items-center justify-center rounded-full text-caiment-ink-soft hover:bg-white/70"
             >
-              <RotateCcw
-                size={15}
-              />
+              <RotateCcw size={15} />
             </button>
 
-            {/* Aumentar zoom. */}
             <button
               onClick={() =>
                 handleZoom(1)
