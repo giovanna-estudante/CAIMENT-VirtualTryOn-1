@@ -269,7 +269,7 @@ export default function FittingRoomPage() {
 
           <Card className="overflow-hidden">
 
-            <div className="relative flex min-h-[420px] flex-col items-center justify-center overflow-hidden rounded-3xl bg-caiment-ink px-6 py-12 text-center">
+            <div className="relative flex min-h-[820px] flex-col items-center justify-center overflow-hidden rounded-3xl bg-caiment-ink px-6 py-12 text-center">
 
               <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-caiment-purple-600/30 blur-3xl" />
 
@@ -337,11 +337,12 @@ export default function FittingRoomPage() {
                       modelUrl={modelUrl}
                       clothingModelUrl={product.clothingModel}
                       measurements={measurements}
+                      className="h-[820px]"
                     />
 
                   ) : (
 
-                    <div className="relative flex min-h-[520px] flex-col items-center justify-center overflow-hidden rounded-3xl bg-caiment-ink px-8 py-12 text-center">
+                    <div className="relative flex min-h-[820px] flex-col items-center justify-center overflow-hidden rounded-3xl bg-caiment-ink px-8 py-12 text-center">
 
                       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-caiment-purple-600/30 blur-3xl" />
 

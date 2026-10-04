@@ -648,6 +648,15 @@ function ClothingModel({
       );
     }
 
+    // Ajusta a orientação da frente da roupa
+    // para ficar voltada para a mesma direção do avatar.
+    group.rotation.y = Math.PI;
+    group.updateMatrixWorld(true);
+
+    console.log(
+      '🔄 Orientação da roupa ajustada.'
+    );
+
     /*
      * Mede novamente depois da
      * possível rotação.
@@ -956,7 +965,27 @@ export function AvatarViewer({
   }, [modelUrl]);
 
   const handleReset = () => {
-    controlsRef.current?.reset();
+    const controls = controlsRef.current;
+
+    if (!controls) {
+      return;
+    }
+
+    const camera = controls.object;
+
+    camera.position.set(
+      0,
+      1.7,
+      5.2
+    );
+
+    controls.target.set(
+      0,
+      1.7,
+      0
+    );
+
+    controls.update();
   };
 
   const handleZoom = (
