@@ -16,10 +16,8 @@ import { useAuth } from '@/context/AuthContext';
 
 import { getAvatar } from '@/services/firebase/avatar';
 
-import {
-  getMeasurements,
-  type UserMeasurements,
-} from '@/services/firebase/measurements';
+import { getMeasurements } from '@/services/firebase/measurements';
+import type { UserMeasurements } from '@/types/measurements';
 
 export default function AvatarPage() {
   const { user } = useAuth();
@@ -203,67 +201,48 @@ export default function AvatarPage() {
               {measurements ? (
 
                 <>
-                  {/* ALTURA */}
-
+                  {/*
+                    Altura 
+                  */}
                   <MeasurementCard
                     label="Altura"
-                    value={measurements.height}
+                    value={measurements.medidas.altura}
                     unit="cm"
                   />
 
-                  {/* PESO */}
-
-                  <MeasurementCard
-                    label="Peso"
-                    value={measurements.weight}
-                    unit="kg"
-                  />
-
-                  {/* OMBROS */}
-
+                  {/*
+                    Ombros 
+                  */}
                   <MeasurementCard
                     label="Ombros"
-                    value={measurements.shoulders}
+                    value={measurements.medidas.ombros}
                     unit="cm"
                   />
 
-                  {/* BUSTO */}
-
+                  {/*
+                    Tórax 
+                  */}
                   <MeasurementCard
-                    label="Busto / Tórax"
-                    value={measurements.bust}
+                    label="Tórax"
+                    value={measurements.medidas.torax}
                     unit="cm"
                   />
 
-                  {/* CINTURA */}
-
+                  {/*
+                    Cintura 
+                  */}
                   <MeasurementCard
                     label="Cintura"
-                    value={measurements.waist}
+                    value={measurements.medidas.cintura}
                     unit="cm"
                   />
-
-                  {/* QUADRIL */}
-
+                  
+                  {/*
+                    Quadril 
+                  */}
                   <MeasurementCard
                     label="Quadril"
-                    value={measurements.hip}
-                    unit="cm"
-                  />
-
-                  {/* BRAÇO */}
-
-                  <MeasurementCard
-                    label="Braço"
-                    value={measurements.arm}
-                    unit="cm"
-                  />
-
-                  {/* PERNA */}
-
-                  <MeasurementCard
-                    label="Perna"
-                    value={measurements.leg}
+                    value={measurements.medidas.quadril}
                     unit="cm"
                   />
                 </>

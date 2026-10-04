@@ -5,20 +5,9 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
-import { db } from './config';
+import { db } from '../../services/firebase/config';
 
-export interface UserMeasurements {
-  height: number;
-  weight?: number;
-  bust: number;
-  waist: number;
-  hip: number;
-  shoulders: number;
-  arm: number;
-  leg: number;
-  gender?: string;
-  updatedAt?: unknown;
-}
+import type { UserMeasurements } from '@/types/measurements';
 
 export async function saveMeasurements(
   uid: string,

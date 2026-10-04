@@ -23,10 +23,8 @@ import type {
   OrbitControls as OrbitControlsImpl,
 } from 'three-stdlib';
 
-// Importa as medidas cadastradas pelo usuário.
-import type {
-  UserMeasurements,
-} from '@/services/firebase/measurements';
+// Importa o tipo das medidas do usuário.
+import type { UserMeasurements } from '@/types/measurements';
 
 // Importa recursos usados para manipular os modelos 3D.
 import {
@@ -497,10 +495,8 @@ function AvatarModelObject({
 /**
  * Carrega e posiciona a roupa 3D.
  *
- * As medidas do usuário já são recebidas aqui.
- * Neste momento elas ainda não alteram a roupa.
- * Primeiro vamos descobrir quais Shape Keys
- * existem no arquivo GLB.
+ * As medidas do usuário controlam as Shape Keys
+ * compatíveis com o perfil de medidas.
  */
 function ClothingModel({
   url,
@@ -599,162 +595,133 @@ function ClothingModel({
                     );
                   };
 
-                  // ============================================================
+                  //=========================================
                   // CINTURA
-                  // ============================================================
+                  //=========================================
+                  const cinturaIndex = mesh.morphTargetDictionary["Cintura"];
 
-                  const cinturaIndex =
-                    mesh.morphTargetDictionary["Cintura"];
-
-                  if (cinturaIndex !== undefined) {
+                  if (cinturaIndex !== undefined && measurements.medidas.cintura !== undefined) {
                     const influence = calcularInfluence(
-                      measurements.waist,
+                      measurements.medidas.cintura,
                       60,
                       100
                     );
 
-                    mesh.morphTargetInfluences[cinturaIndex] =
-                      influence;
-
-                    console.log(
-                      "👕 SHAPE KEY CINTURA",
-                      {
-                        medida: measurements.waist,
-                        influence,
-                      }
-                    );
+                    mesh.morphTargetInfluences[cinturaIndex] = influence;
                   }
 
-                  // ============================================================
-                  // BUSTO
-                  // ============================================================
+                  //=========================================
+                  // TÓRAX
+                  //=========================================
+                  const toraxIndex = mesh.morphTargetDictionary["Tórax"];
 
-                  const bustoIndex =
-                    mesh.morphTargetDictionary["Busto"];
-
-                  if (bustoIndex !== undefined) {
+                  if (toraxIndex !== undefined && measurements.medidas.torax !== undefined) {
                     const influence = calcularInfluence(
-                      measurements.bust,
+                      measurements.medidas.torax,
                       70,
                       120
                     );
 
-                    mesh.morphTargetInfluences[bustoIndex] =
-                      influence;
-
-                    console.log(
-                      "👕 SHAPE KEY BUSTO",
-                      {
-                        medida: measurements.bust,
-                        influence,
-                      }
-                    );
+                    mesh.morphTargetInfluences[toraxIndex] = influence;
                   }
 
-                  // ============================================================
-                  // BUSTO + OMBROS
-                  // ============================================================
+                  //=========================================
+                  // OMBROS
+                  //=========================================
+                  const ombrosIndex = mesh.morphTargetDictionary["Ombros"];
 
-                  const bustoOmbrosIndex =
-                    mesh.morphTargetDictionary["Busto+Ombros"];
-
-                  if (bustoOmbrosIndex !== undefined) {
+                  if (ombrosIndex !== undefined && measurements.medidas.ombros !== undefined) {
                     const influence = calcularInfluence(
-                      measurements.shoulders,
+                      measurements.medidas.ombros,
                       30,
                       55
                     );
 
-                    mesh.morphTargetInfluences[
-                      bustoOmbrosIndex
-                    ] = influence;
-
-                    console.log(
-                      "👕 SHAPE KEY BUSTO + OMBROS",
-                      {
-                        medida: measurements.shoulders,
-                        influence,
-                      }
-                    );
+                    mesh.morphTargetInfluences[ombrosIndex] = influence;
                   }
 
-                  // ============================================================
-                  // MANGA
-                  // ============================================================
-
-                  const mangaIndex =
-                    mesh.morphTargetDictionary["Manga"];
-
-                  if (mangaIndex !== undefined) {
-                    const influence = calcularInfluence(
-                      measurements.arm,
-                      20,
-                      40
-                    );
-
-                    mesh.morphTargetInfluences[mangaIndex] =
-                      influence;
-
-                    console.log(
-                      "👕 SHAPE KEY MANGA",
-                      {
-                        medida: measurements.arm,
-                        influence,
-                      }
-                    );
-                  }
-
-                  // ============================================================
-                  // MANGA 2
-                  // ============================================================
-
-                  const manga2Index =
-                    mesh.morphTargetDictionary["Manga2"];
-
-                  if (manga2Index !== undefined) {
-                    const influence = calcularInfluence(
-                      measurements.arm,
-                      20,
-                      40
-                    );
-
-                    mesh.morphTargetInfluences[manga2Index] =
-                      influence;
-
-                    console.log(
-                      "👕 SHAPE KEY MANGA2",
-                      {
-                        medida: measurements.arm,
-                        influence,
-                      }
-                    );
-                  }
-
-                  // ============================================================
+                  //=========================================
                   // COMPRIMENTO
-                  // ============================================================
-
+                  //=========================================
                   const comprimentoIndex =
                     mesh.morphTargetDictionary["Comprimento"];
 
-                  if (comprimentoIndex !== undefined) {
+                  if (comprimentoIndex !== undefined && measurements.medidas.altura !== undefined) {
                     const influence = calcularInfluence(
-                      measurements.height,
+                      measurements.medidas.altura,
                       150,
                       190
                     );
 
-                    mesh.morphTargetInfluences[
-                      comprimentoIndex
-                    ] = influence;
+                    mesh.morphTargetInfluences[comprimentoIndex] = influence;
+                  }
 
-                    console.log(
-                      "👕 SHAPE KEY COMPRIMENTO",
-                      {
-                        medida: measurements.height,
-                        influence,
-                      }
-                    );
+                  //=========================================
+                  // MANGA
+                  //=========================================
+                  const mangaIndex = mesh.morphTargetDictionary["Manga"];
+
+                  if (mangaIndex !== undefined) {
+                    mesh.morphTargetInfluences[mangaIndex] = 0;
+                  }
+
+                  //=========================================
+                  // GOLA
+                  //=========================================
+                  const golaIndex = mesh.morphTargetDictionary["Gola"];
+
+                  if (golaIndex !== undefined) {
+                    mesh.morphTargetInfluences[golaIndex] = 0;
+                  }
+
+                  //=========================================
+                  // CAIMENTO
+                  //=========================================
+                  const caimentoIndex =
+                    mesh.morphTargetDictionary["Caimento"];
+
+                  if (caimentoIndex !== undefined) {
+                    mesh.morphTargetInfluences[caimentoIndex] = 0;
+                  }
+
+                  //=========================================
+                  // BARRA
+                  //=========================================
+                  const barraIndex =
+                    mesh.morphTargetDictionary["Barra"];
+
+                  if (barraIndex !== undefined) {
+                    mesh.morphTargetInfluences[barraIndex] = 0;
+                  }
+
+                  //=========================================
+                  // AJUSTE LATERAL
+                  //=========================================
+                  const ajusteLateralIndex =
+                    mesh.morphTargetDictionary["Ajuste lateral"];
+
+                  if (ajusteLateralIndex !== undefined) {
+                    mesh.morphTargetInfluences[ajusteLateralIndex] = 0;
+                  }
+
+                  //=========================================
+                  // MANGA_FINAL
+                  //=========================================
+                  const mangaFinalIndex =
+                    mesh.morphTargetDictionary["Manga_Final"];
+
+                  if (mangaFinalIndex !== undefined) {
+                    mesh.morphTargetInfluences[mangaFinalIndex] = 0;
+                  }
+
+                  //=========================================
+                  // FRENTE_COSTAS
+                  //=========================================
+                  const frenteCostasIndex =
+                    mesh.morphTargetDictionary["Frente_Costas"];
+
+                  if (frenteCostasIndex !== undefined) {
+                    mesh.morphTargetInfluences[frenteCostasIndex] = 0;
                   }
                 }
 
@@ -780,7 +747,7 @@ function ClothingModel({
         );
       }
     );
-  }, [url]);
+  }, [url, measurements]);
 
   // Referência ao grupo que controla a roupa.
   const groupRef =
@@ -845,7 +812,7 @@ function ClothingModel({
     // 3. VERIFICA SE A ALTURA DA ROUPA É VÁLIDA
     // ============================================================
 
-    if (size.y <= 0) {
+    if (size.z <= 0) {
       console.log(
         "👕 7 - PAROU: altura da roupa inválida"
       );
@@ -867,7 +834,7 @@ function ClothingModel({
     const targetHeight = 1.65;
 
     group.scale.setScalar(
-      targetHeight / size.y
+      targetHeight / size.z
     );
 
     // Atualiza os cálculos internos do Three.js depois da escala.
@@ -932,13 +899,13 @@ function ClothingModel({
 
     group.position.x = -scaledCenter.x;
 
-    group.position.z = -scaledCenter.z;
+    group.position.y = -scaledCenter.y;
 
-    group.position.y =
-      0.95 - scaledCenter.y;
+    group.position.z =
+      0.95 - scaledCenter.z;
 
     // Pequeno ajuste provisório para a profundidade.
-    group.position.z += 0.08;
+    group.position.y += 0.08;
 
     console.log("👕 11 - ROUPA POSICIONADA", {
       x: group.position.x,

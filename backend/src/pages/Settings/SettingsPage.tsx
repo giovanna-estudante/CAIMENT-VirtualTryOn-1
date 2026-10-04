@@ -1,4 +1,44 @@
+// ============================================================
+// CAIMENT
+// Arquivo: SettingsPage.tsx
+// ============================================================
+//
+// Esta página reúne as configurações do usuário.
+//
+// Seções:
+// - Perfil
+// - Dados do avatar / Medidas
+// - Privacidade
+// - Notificações
+// - Preferências
+//
+// A parte de MEDIDAS utiliza a mesma estrutura criada para
+// o cadastro da segunda etapa:
+//
+// UserMeasurements
+// ├── modelo
+// └── medidas
+//     ├── altura
+//     ├── ombros
+//     ├── torax
+//     ├── cintura
+//     └── quadril
+//
+// Os dados são salvos no Firebase em:
+//
+// users/{uid}/measurements/current
+//
+// IMPORTANTE:
+// Esta página NÃO cria nem altera o avatar.
+// Ela apenas permite consultar e editar as medidas salvas.
+// ============================================================
+
 import { useEffect, useState } from 'react';
+
+// ============================================================
+// ÍCONES
+// ============================================================
+
 import {
   User,
   Ruler,
@@ -12,11 +52,24 @@ import {
   Trash2,
 } from 'lucide-react';
 
+// ============================================================
+// COMPONENTES
+// ============================================================
+
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
+
+// ============================================================
+// AUTENTICAÇÃO
+// ============================================================
+
 import { useAuth } from '@/context/AuthContext';
+
+// ============================================================
+// FIREBASE - PERFIL
+// ============================================================
 
 import {
   getUserProfile,
@@ -24,15 +77,57 @@ import {
   deleteUserProfile,
 } from '@/services/firebase/users';
 
+// ============================================================
+// FIREBASE - MEDIDAS
+// ============================================================
+//
+// O serviço possui:
+// - getMeasurements()
+// - saveMeasurements()
+//
+// ============================================================
+
 import {
   getMeasurements,
   saveMeasurements,
-  type UserMeasurements,
 } from '@/services/firebase/measurements';
+
+// ============================================================
+// FIREBASE AUTH
+// ============================================================
 
 import { deleteCurrentUser } from '@/services/firebase/auth';
 
+// ============================================================
+// TIPOS DAS MEDIDAS
+// ============================================================
+
+import type {
+  EditableMeasurements,
+  UserMeasurements,
+} from '@/types/measurements';
+
+// ============================================================
+// DADOS PADRÃO
+// ============================================================
+//
+// Usamos os mesmos valores iniciais utilizados pelo BodyEditor.
+//
+// ============================================================
+
+import {
+  defaultUnisexMeasurements,
+} from '@/data/bodyMeasurement';
+
+// ============================================================
+// UTILITÁRIO DE CLASSES
+// ============================================================
+
 import { cn } from '@/utils/cn';
+
+// ============================================================
+// TIPOS DAS SEÇÕES
+// ============================================================
 
 type Section =
   | 'perfil'
@@ -40,6 +135,10 @@ type Section =
   | 'privacidade'
   | 'notificacoes'
   | 'preferencias';
+
+// ============================================================
+// MENU DE CONFIGURAÇÕES
+// ============================================================
 
 const sections: {
   id: Section;
@@ -73,6 +172,17 @@ const sections: {
   },
 ];
 
+// ============================================================
+// COMPONENTE TOGGLE
+// ============================================================
+//
+// Esse componente é usado nas seções de:
+// - Privacidade
+// - Notificações
+// - Preferências
+//
+// ============================================================
+
 function Toggle({
   label,
   description,
@@ -82,8 +192,9 @@ function Toggle({
   description: string;
   defaultChecked?: boolean;
 }) {
-  const [checked, setChecked] =
-    useState(!!defaultChecked);
+  const [checked, setChecked] = useState(
+    !!defaultChecked
+  );
 
   return (
     <div className="flex items-center justify-between gap-4 py-3.5">
@@ -99,7 +210,7 @@ function Toggle({
 
       <button
         onClick={() =>
-          setChecked((v) => !v)
+          setChecked((value) => !value)
         }
         role="switch"
         aria-checked={checked}
@@ -123,15 +234,33 @@ function Toggle({
   );
 }
 
+// ============================================================
+// COMPONENTE PRINCIPAL
+// ============================================================
+
 export default function SettingsPage() {
+
+  // ==========================================================
+  // SEÇÃO ATUAL
+  // ==========================================================
+
   const [active, setActive] =
     useState<Section>('perfil');
 
+  // ==========================================================
+  // AUTENTICAÇÃO E TOAST
+  // ==========================================================
+
   const { show } = useToast();
+
   const { user } = useAuth();
 
+  // ==========================================================
   // PERFIL
+  // ==========================================================
+
   const [name, setName] = useState('');
+
   const [email, setEmail] = useState('');
 
   const [loadingProfile, setLoadingProfile] =
@@ -140,17 +269,15 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] =
     useState(false);
 
+  // ==========================================================
   // MEDIDAS
+  // ==========================================================
+
   const [measurements, setMeasurements] =
     useState<UserMeasurements>({
-      height: 0,
-      weight: 0,
-      shoulders: 0,
-      bust: 0,
-      waist: 0,
-      hip: 0,
-      arm: 0,
-      leg: 0,
+      medidas: {
+        ...defaultUnisexMeasurements,
+      },
     });
 
   const [loadingMeasurements, setLoadingMeasurements] =
@@ -159,29 +286,48 @@ export default function SettingsPage() {
   const [savingMeasurements, setSavingMeasurements] =
     useState(false);
 
-  // =========================
+  // ==========================================================
   // CARREGAR PERFIL
-  // =========================
+  // ==========================================================
 
   useEffect(() => {
     async function loadProfile() {
+
+      // Se não houver usuário autenticado,
+      // não há perfil para carregar.
+
       if (!user) {
         setLoadingProfile(false);
         return;
       }
 
       try {
+
+        // Busca o perfil no Firestore.
+
         const profile =
           await getUserProfile(user.uid);
 
         if (profile) {
+
+          // Utiliza o nome salvo no Firestore.
+
           setName(profile.name || '');
+
+          // Utiliza o e-mail salvo no Firestore.
+          // Caso não exista, utiliza o e-mail do Auth.
+
           setEmail(
             profile.email ||
               user.email ||
               '',
           );
+
         } else {
+
+          // Caso o perfil não exista,
+          // utiliza os dados disponíveis no Firebase Auth.
+
           setName(
             user.displayName || '',
           );
@@ -190,11 +336,16 @@ export default function SettingsPage() {
             user.email || '',
           );
         }
+
       } catch (error) {
+
         console.error(
           'Erro ao carregar perfil:',
           error,
         );
+
+        // Mesmo se houver erro no Firestore,
+        // tentamos utilizar os dados do Auth.
 
         setName(
           user.displayName || '',
@@ -203,20 +354,33 @@ export default function SettingsPage() {
         setEmail(
           user.email || '',
         );
+
       } finally {
+
         setLoadingProfile(false);
       }
     }
 
     loadProfile();
+
   }, [user]);
 
-  // =========================
+  // ==========================================================
   // CARREGAR MEDIDAS
-  // =========================
+  // ==========================================================
+  //
+  // As medidas só são buscadas quando o usuário abre
+  // a seção "Dados do avatar".
+  //
+  // ==========================================================
 
   useEffect(() => {
+
     async function loadMeasurements() {
+
+      // Sem usuário autenticado, não podemos buscar
+      // as medidas.
+
       if (!user || active !== 'medidas') {
         return;
       }
@@ -224,23 +388,24 @@ export default function SettingsPage() {
       setLoadingMeasurements(true);
 
       try {
+
+        // Busca:
+        //
+        // users/{uid}/measurements/current
+
         const saved =
           await getMeasurements(user.uid);
 
+        // Se existirem medidas salvas,
+        // colocamos os dados no estado da página.
+
         if (saved) {
-          setMeasurements({
-            height: saved.height ?? 0,
-            weight: saved.weight ?? 0,
-            shoulders:
-              saved.shoulders ?? 0,
-            bust: saved.bust ?? 0,
-            waist: saved.waist ?? 0,
-            hip: saved.hip ?? 0,
-            arm: saved.arm ?? 0,
-            leg: saved.leg ?? 0,
-          });
+
+          setMeasurements(saved);
         }
+
       } catch (error) {
+
         console.error(
           'Erro ao carregar medidas:',
           error,
@@ -249,20 +414,53 @@ export default function SettingsPage() {
         show(
           'Não foi possível carregar suas medidas.',
         );
+
       } finally {
+
         setLoadingMeasurements(false);
       }
     }
 
     loadMeasurements();
+
   }, [user, active, show]);
 
-  // =========================
+  // ==========================================================
+  // ALTERAR UMA MEDIDA
+  // ==========================================================
+
+  const updateMeasurement = (
+    key: keyof EditableMeasurements,
+    value: string,
+  ) => {
+
+    setMeasurements((previous) => ({
+
+      // Mantém o modelo corporal selecionado.
+
+      ...previous,
+
+      // Atualiza somente a medida alterada.
+
+      medidas: {
+        ...previous.medidas,
+
+        [key]:
+          value === ''
+            ? 0
+            : Number(value),
+      },
+    }));
+  };
+
+  // ==========================================================
   // SALVAR PERFIL
-  // =========================
+  // ==========================================================
 
   const handleSaveProfile = async () => {
+
     if (!user) {
+
       show(
         'Você precisa estar conectado para salvar as alterações.',
       );
@@ -271,13 +469,16 @@ export default function SettingsPage() {
     }
 
     if (!name.trim()) {
+
       show('Digite seu nome.');
+
       return;
     }
 
     setSavingProfile(true);
 
     try {
+
       await updateUserProfile(
         user.uid,
         {
@@ -288,7 +489,9 @@ export default function SettingsPage() {
       show(
         'Perfil atualizado com sucesso.',
       );
+
     } catch (error) {
+
       console.error(
         'Erro ao atualizar perfil:',
         error,
@@ -297,23 +500,36 @@ export default function SettingsPage() {
       show(
         'Não foi possível atualizar o perfil.',
       );
+
     } finally {
+
       setSavingProfile(false);
     }
   };
 
-  // =========================
-  // EXCLUIR PERFIL
-  // =========================
+  // ==========================================================
+  // EXCLUIR CONTA
+  // ==========================================================
+  //
+  // Primeiro excluímos o documento do usuário no Firestore.
+  //
+  // Depois excluímos a conta do Firebase Authentication.
+  //
+  // ==========================================================
 
   const handleDeleteAccount = async () => {
+
     if (!user) {
-      show('Você precisa estar conectado para excluir sua conta.');
+
+      show(
+        'Você precisa estar conectado para excluir sua conta.',
+      );
+
       return;
     }
 
     const confirmed = window.confirm(
-      'Tem certeza que deseja excluir sua conta? Essa ação não poderá ser desfeita.'
+      'Tem certeza que deseja excluir sua conta? Essa ação não poderá ser desfeita.',
     );
 
     if (!confirmed) {
@@ -321,37 +537,64 @@ export default function SettingsPage() {
     }
 
     try {
-      // Primeiro exclui o perfil salvo no Firestore.
+
+      // Exclui o perfil salvo no Firestore.
+
       await deleteUserProfile(user.uid);
 
-      // Depois exclui a conta do Firebase Authentication.
+      // Exclui a conta no Firebase Authentication.
+
       await deleteCurrentUser();
 
-      // O usuário será desconectado automaticamente.
-      window.location.href = '/login';
-    } catch (error: any) {
-      console.error('Erro ao excluir conta:', error);
+      // Redireciona para o login.
 
-      if (error?.code === 'auth/requires-recent-login') {
+      window.location.href = '/login';
+
+    } catch (error: any) {
+
+      console.error(
+        'Erro ao excluir conta:',
+        error,
+      );
+
+      if (
+        error?.code ===
+        'auth/requires-recent-login'
+      ) {
+
         show(
-          'Por segurança, faça login novamente antes de excluir sua conta.'
+          'Por segurança, faça login novamente antes de excluir sua conta.',
         );
+
         return;
       }
 
       show(
-        'Não foi possível excluir sua conta. Tente novamente.'
+        'Não foi possível excluir sua conta. Tente novamente.',
       );
     }
   };
 
-  // =========================
+  // ==========================================================
   // SALVAR MEDIDAS
-  // =========================
+  // ==========================================================
+  //
+  // Salva exatamente o mesmo formato usado durante
+  // o cadastro:
+  //
+  // {
+  //   medidas
+  // }
+  //
+  // Depois marcamos measurementsCompleted como true.
+  //
+  // ==========================================================
 
   const handleSaveMeasurements =
     async () => {
+
       if (!user) {
+
         show(
           'Você precisa estar conectado para salvar suas medidas.',
         );
@@ -359,15 +602,20 @@ export default function SettingsPage() {
         return;
       }
 
+      // ======================================================
+      // MEDIDAS OBRIGATÓRIAS
+      // ======================================================
+
       const requiredMeasurements = [
-        measurements.height,
-        measurements.shoulders,
-        measurements.bust,
-        measurements.waist,
-        measurements.hip,
-        measurements.arm,
-        measurements.leg,
+        measurements.medidas.altura,
+        measurements.medidas.ombros,
+        measurements.medidas.torax,
+        measurements.medidas.cintura,
+        measurements.medidas.quadril,
       ];
+
+      // Verifica se alguma medida está vazia,
+      // igual a zero ou negativa.
 
       const hasInvalidMeasurement =
         requiredMeasurements.some(
@@ -376,6 +624,7 @@ export default function SettingsPage() {
         );
 
       if (hasInvalidMeasurement) {
+
         show(
           'Preencha todas as medidas obrigatórias.',
         );
@@ -386,10 +635,17 @@ export default function SettingsPage() {
       setSavingMeasurements(true);
 
       try {
+
+        // Salva as medidas no mesmo documento utilizado
+        // pelo cadastro.
+
         await saveMeasurements(
           user.uid,
           measurements,
         );
+
+        // Indica no perfil que o usuário já concluiu
+        // o cadastro das medidas.
 
         await updateUserProfile(
           user.uid,
@@ -402,7 +658,9 @@ export default function SettingsPage() {
         show(
           'Medidas salvas com sucesso.',
         );
+
       } catch (error) {
+
         console.error(
           'Erro ao salvar medidas:',
           error,
@@ -411,34 +669,25 @@ export default function SettingsPage() {
         show(
           'Não foi possível salvar suas medidas.',
         );
+
       } finally {
+
         setSavingMeasurements(false);
       }
     };
 
-  // =========================
-  // ATUALIZAR MEDIDA
-  // =========================
-
-  const updateMeasurement = (
-    key: keyof UserMeasurements,
-    value: string,
-  ) => {
-    setMeasurements((prev) => ({
-      ...prev,
-      [key]:
-        value === ''
-          ? 0
-          : Number(value),
-    }));
-  };
+  // ==========================================================
+  // RENDERIZAÇÃO
+  // ==========================================================
 
   return (
     <DashboardLayout title="Configurações">
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
 
-        {/* MENU */}
+        {/* ==================================================
+            MENU
+            ================================================== */}
 
         <nav className="flex gap-1.5 overflow-x-auto lg:flex-col lg:overflow-visible">
 
@@ -448,6 +697,7 @@ export default function SettingsPage() {
               label,
               icon: Icon,
             }) => (
+
               <button
                 key={id}
                 onClick={() =>
@@ -455,14 +705,17 @@ export default function SettingsPage() {
                 }
                 className={cn(
                   'flex shrink-0 items-center gap-2.5 rounded-2xl px-4 py-2.5 text-left text-sm font-medium transition-colors',
+
                   active === id
                     ? 'bg-caiment-ink text-white'
                     : 'text-caiment-ink-soft hover:bg-caiment-purple-50 hover:text-caiment-ink',
                 )}
               >
+
                 <Icon size={16} />
 
                 {label}
+
               </button>
             ),
           )}
@@ -477,20 +730,24 @@ export default function SettingsPage() {
           }
         >
 
-          {/* ========================= */}
-          {/* PERFIL */}
-          {/* ========================= */}
+          {/* ==================================================
+              PERFIL
+              ================================================== */}
 
           {active === 'perfil' && (
+
             <div className="grid overflow-hidden rounded-3xl sm:grid-cols-2">
 
               <div className="bg-caiment-purple-700 p-7">
 
                 <h3 className="font-display text-xl font-medium text-white">
+
                   <span className="italic">
                     Meu
                   </span>
+
                   CAIMENT
+
                 </h3>
 
                 <div className="mt-6 space-y-3">
@@ -501,9 +758,9 @@ export default function SettingsPage() {
 
                     <input
                       value={name}
-                      onChange={(e) =>
+                      onChange={(event) =>
                         setName(
-                          e.target.value,
+                          event.target.value,
                         )
                       }
                       placeholder={
@@ -590,9 +847,11 @@ export default function SettingsPage() {
                     loadingProfile
                   }
                 >
+
                   {savingProfile
                     ? 'Salvando...'
                     : 'Salvar alterações'}
+
                 </Button>
 
               </div>
@@ -603,39 +862,41 @@ export default function SettingsPage() {
                   href="#"
                   className="flex items-center gap-2.5 text-sm text-caiment-ink hover:underline"
                 >
-                  <FileText
-                    size={16}
-                  />
+
+                  <FileText size={16} />
 
                   Termos de Uso
+
                 </a>
 
                 <div className="h-px bg-caiment-ink/10" />
 
                 <p className="flex items-center gap-2.5 text-sm text-caiment-ink">
+
                   <Phone size={16} />
 
                   (11) 94433-9483
+
                 </p>
 
                 <p className="flex items-center gap-2.5 text-sm text-caiment-ink">
-                  <MailIcon
-                    size={16}
-                  />
 
-                  {email ||
-                    'Carregando...'}
+                  <MailIcon size={16} />
+
+                  {email || 'Carregando...'}
+
                 </p>
 
                 <div className="pt-16">
 
-                  <button 
-                    onClick={handleDeleteAccount}
-                    className="flex items-center gap-2 text-xs font-medium text-caiment-ink/70 hover:text-caiment-ink">
+                  <button
+                    onClick={
+                      handleDeleteAccount
+                    }
+                    className="flex items-center gap-2 text-xs font-medium text-caiment-ink/70 hover:text-caiment-ink"
+                  >
 
-                    <Trash2
-                      size={13}
-                    />
+                    <Trash2 size={13} />
 
                     Excluir conta
 
@@ -648,24 +909,25 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ========================= */}
-          {/* MEDIDAS */}
-          {/* ========================= */}
+          {/* ==================================================
+              MEDIDAS
+              ================================================== */}
 
           {active === 'medidas' && (
+
             <div>
 
               <div>
+
                 <h3 className="font-display text-lg font-medium text-caiment-ink">
                   Dados do avatar
                 </h3>
 
                 <p className="mt-1 text-sm text-caiment-ink-soft">
-                  Cadastre suas medidas para
-                  personalizar seu avatar e
-                  melhorar a experiência no
-                  provador virtual.
+                  Cadastre ou atualize suas medidas
+                  para personalizar seu perfil corporal.
                 </p>
+
               </div>
 
               {loadingMeasurements ? (
@@ -682,210 +944,152 @@ export default function SettingsPage() {
 
                 <>
 
+                  {/* ==================================================
+                      CAMPOS DE MEDIDAS
+                      ================================================== */}
+
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
 
                     {/* ALTURA */}
 
                     <div>
+
                       <label className="text-xs font-medium text-caiment-ink-soft">
                         Altura (cm)
                       </label>
 
                       <input
                         type="number"
-                        min="0"
+                        min="1"
                         value={
-                          measurements.height ||
+                          measurements.medidas.altura ||
                           ''
                         }
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateMeasurement(
-                            'height',
-                            e.target.value,
+                            'altura',
+                            event.target.value,
                           )
                         }
                         placeholder="Ex.: 168"
                         className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
                       />
-                    </div>
 
-                    {/* PESO */}
-
-                    <div>
-                      <label className="text-xs font-medium text-caiment-ink-soft">
-                        Peso (kg)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={
-                          measurements.weight ||
-                          ''
-                        }
-                        onChange={(e) =>
-                          updateMeasurement(
-                            'weight',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="Ex.: 65"
-                        className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
-                      />
                     </div>
 
                     {/* OMBROS */}
 
                     <div>
+
                       <label className="text-xs font-medium text-caiment-ink-soft">
                         Ombros (cm)
                       </label>
 
                       <input
                         type="number"
-                        min="0"
+                        min="1"
                         value={
-                          measurements.shoulders ||
+                          measurements.medidas.ombros ||
                           ''
                         }
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateMeasurement(
-                            'shoulders',
-                            e.target.value,
+                            'ombros',
+                            event.target.value,
                           )
                         }
                         placeholder="Ex.: 42"
                         className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
                       />
+
                     </div>
 
-                    {/* BUSTO */}
+                    {/* TÓRAX */}
 
                     <div>
+
                       <label className="text-xs font-medium text-caiment-ink-soft">
-                        Busto / Tórax (cm)
+                        Tórax (cm)
                       </label>
 
                       <input
                         type="number"
-                        min="0"
+                        min="1"
                         value={
-                          measurements.bust ||
+                          measurements.medidas.torax ||
                           ''
                         }
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateMeasurement(
-                            'bust',
-                            e.target.value,
+                            'torax',
+                            event.target.value,
                           )
                         }
                         placeholder="Ex.: 90"
                         className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
                       />
+
                     </div>
 
                     {/* CINTURA */}
 
                     <div>
+
                       <label className="text-xs font-medium text-caiment-ink-soft">
                         Cintura (cm)
                       </label>
 
                       <input
                         type="number"
-                        min="0"
+                        min="1"
                         value={
-                          measurements.waist ||
+                          measurements.medidas.cintura ||
                           ''
                         }
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateMeasurement(
-                            'waist',
-                            e.target.value,
+                            'cintura',
+                            event.target.value,
                           )
                         }
                         placeholder="Ex.: 72"
                         className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
                       />
+
                     </div>
 
                     {/* QUADRIL */}
 
                     <div>
+
                       <label className="text-xs font-medium text-caiment-ink-soft">
                         Quadril (cm)
                       </label>
 
                       <input
                         type="number"
-                        min="0"
+                        min="1"
                         value={
-                          measurements.hip ||
+                          measurements.medidas.quadril ||
                           ''
                         }
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateMeasurement(
-                            'hip',
-                            e.target.value,
+                            'quadril',
+                            event.target.value,
                           )
                         }
                         placeholder="Ex.: 96"
                         className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
                       />
-                    </div>
 
-                    {/* BRAÇO */}
-
-                    <div>
-                      <label className="text-xs font-medium text-caiment-ink-soft">
-                        Braço (cm)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        value={
-                          measurements.arm ||
-                          ''
-                        }
-                        onChange={(e) =>
-                          updateMeasurement(
-                            'arm',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="Ex.: 28"
-                        className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
-                      />
-                    </div>
-
-                    {/* PERNA */}
-
-                    <div>
-                      <label className="text-xs font-medium text-caiment-ink-soft">
-                        Perna (cm)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        value={
-                          measurements.leg ||
-                          ''
-                        }
-                        onChange={(e) =>
-                          updateMeasurement(
-                            'leg',
-                            e.target.value,
-                          )
-                        }
-                        placeholder="Ex.: 90"
-                        className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
-                      />
                     </div>
 
                   </div>
+
+                  {/* ==================================================
+                      BOTÃO SALVAR
+                      ================================================== */}
 
                   <div className="mt-5 flex justify-end">
 
@@ -898,9 +1102,11 @@ export default function SettingsPage() {
                         savingMeasurements
                       }
                     >
+
                       {savingMeasurements
                         ? 'Salvando...'
                         : 'Salvar medidas'}
+
                     </Button>
 
                   </div>
@@ -911,11 +1117,12 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ========================= */}
-          {/* PRIVACIDADE */}
-          {/* ========================= */}
+          {/* ==================================================
+              PRIVACIDADE
+              ================================================== */}
 
           {active === 'privacidade' && (
+
             <div className="divide-y divide-caiment-line">
 
               <h3 className="pb-2 font-display text-lg font-medium text-caiment-ink">
@@ -936,11 +1143,12 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ========================= */}
-          {/* NOTIFICAÇÕES */}
-          {/* ========================= */}
+          {/* ==================================================
+              NOTIFICAÇÕES
+              ================================================== */}
 
           {active === 'notificacoes' && (
+
             <div className="divide-y divide-caiment-line">
 
               <h3 className="pb-2 font-display text-lg font-medium text-caiment-ink">
@@ -967,11 +1175,12 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ========================= */}
-          {/* PREFERÊNCIAS */}
-          {/* ========================= */}
+          {/* ==================================================
+              PREFERÊNCIAS
+              ================================================== */}
 
           {active === 'preferencias' && (
+
             <div className="divide-y divide-caiment-line">
 
               <h3 className="pb-2 font-display text-lg font-medium text-caiment-ink">
@@ -993,7 +1202,9 @@ export default function SettingsPage() {
           )}
 
         </Card>
+
       </div>
+
     </DashboardLayout>
   );
 }

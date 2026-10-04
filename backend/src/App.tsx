@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import LoginPage from '@/pages/Login/LoginPage';
 import RegisterPage from '@/pages/Register/RegisterPage';
 import VerificationPage from '@/pages/Register/VerificationPage';
+import RegisterMeasurementsPage from '@/pages/RegisterMeasurements/RegisterMeasurementsPage';
 
 import OnboardingWelcomePage from '@/pages/Onboarding/OnboardingWelcomePage';
 import OnboardingAdjustPage from '@/pages/Onboarding/OnboardingAdjustPage';
@@ -82,6 +83,11 @@ export default function App() {
               <Route
                 path="/cadastro"
                 element={<RegisterPage />}
+              />
+
+              <Route
+                path="/cadastro/medidas"
+                element={<RegisterMeasurementsPage />}
               />
 
               <Route

@@ -1,289 +1,642 @@
 // ============================================================
 // CAIMENT - EDITOR CORPORAL
-// Arquivo: BodyEditor.tsx
 // ============================================================
 //
-// Controla o modelo corporal e as medidas editáveis.
+// Controla o modelo corporal e as medidas editáveis:
+// - alterar as medidas;
+// - destacar a medida selecionada;
+// - enviar as alterações para a página que estiver utilizando
+//   o editor.
+//
 // ============================================================
 
 import { useState } from "react";
 
-import { FemaleBody } from "./FemaleBody";
-import { MaleBody } from "./MaleBody";
 import { UnisexBody } from "./UnisexBody";
 
 import {
-  type BodyModel,
   type EditableMeasurements,
 } from "../../types/measurements";
 
 import {
-  defaultFemaleMeasurements,
-  defaultMaleMeasurements,
   defaultUnisexMeasurements,
 } from "../../data/bodyMeasurement";
 
+// ============================================================
+// PROPRIEDADES DO COMPONENTE
+// ============================================================
+//
+// A página que utilizar o BodyEditor poderá receber:
+// - as medidas atuais.
+//
+// Isso será utilizado posteriormente pela página de cadastro
+// para salvar as medidas no Firebase.
+//
+// ============================================================
+
+interface BodyEditorProps {
+  onChange?: (
+    medidas: EditableMeasurements
+  ) => void;
+}
 
 // ============================================================
 // COMPONENTE
 // ============================================================
 
-export function BodyEditor() {
+export function BodyEditor({
+  onChange,
+}: BodyEditorProps) {
 
-  // Modelo atualmente selecionado
-  const [modelo, setModelo] = useState<BodyModel>("feminino");
+  // ==========================================================
+  // MEDIDAS ATUAIS
+  // ==========================================================
+  //
+  // Guarda as medidas utilizadas pelo modelo corporal.
 
-  // Medidas atualmente utilizadas pelo editor
-  const [medidas, setMedidas] = useState<EditableMeasurements>(
-    defaultFemaleMeasurements
-  );
+  const [medidas, setMedidas] =
+    useState<EditableMeasurements>(
+      defaultUnisexMeasurements
+    );
 
-  // Medida selecionada
+  // ==========================================================
+  // MEDIDA SELECIONADA
+  // ==========================================================
+  //
+  // Guarda qual medida está sendo editada/visualizada.
+  //
+  // Inicialmente, a medida selecionada é a altura.
+  //
+  // ==========================================================
+
   const [medidaSelecionada, setMedidaSelecionada] =
     useState<keyof EditableMeasurements>("altura");
 
-
-  // ==========================================================
-  // TROCA DO MODELO CORPORAL
-  // ==========================================================
-
-  function alterarModelo(novoModelo: BodyModel) {
-    setModelo(novoModelo);
-
-    // Cada modelo começa com seus próprios valores iniciais
-    if (novoModelo === "feminino") {
-      setMedidas(defaultFemaleMeasurements);
-    }
-
-    if (novoModelo === "masculino") {
-      setMedidas(defaultMaleMeasurements);
-    }
-
-    if (novoModelo === "unissex") {
-      setMedidas(defaultUnisexMeasurements);
-    }
-
-    setMedidaSelecionada("altura");
-  }
-
-
   // ==========================================================
   // ALTERAÇÃO DE UMA MEDIDA
+  // ==========================================================
+  //
+  // Atualiza uma medida específica sem apagar as outras.
+  //
   // ==========================================================
 
   function alterarMedida(
     nome: keyof EditableMeasurements,
     valor: number
   ) {
-    setMedidas((medidasAtuais) => ({
-      ...medidasAtuais,
-      [nome]: valor,
-    }));
-  }
 
+    setMedidas((medidasAtuais) => {
+
+      // ------------------------------------------------------
+      // Cria uma nova versão das medidas.
+      // ------------------------------------------------------
+
+      const novasMedidas = {
+        ...medidasAtuais,
+        [nome]: valor,
+      };
+
+      // ------------------------------------------------------
+      // Informa para o componente externo quais são as
+      // medidas atualizadas.
+      //
+      // Isso será utilizado pela página de cadastro para
+      // manter os dados que deverão ser salvos.
+      // ------------------------------------------------------
+
+      onChange?.(novasMedidas);
+
+      return novasMedidas;
+    });
+  }
 
   // ==========================================================
   // CORPO QUE SERÁ EXIBIDO
   // ==========================================================
+  //
+  // Escolhe qual componente corporal deve ser renderizado
+  // de acordo com o modelo selecionado.
+  //
+  // ==========================================================
 
   function renderizarCorpo() {
-    if (modelo === "feminino") {
-      return (
-        <FemaleBody
-          medidas={medidas}
-          medidaSelecionada={medidaSelecionada}
-          onSelectMeasurement={setMedidaSelecionada}
-        />
-      );
-    }
 
-    if (modelo === "masculino") {
-      return (
-        <MaleBody
-          medidas={medidas}
-          medidaSelecionada={medidaSelecionada}
-          onSelectMeasurement={setMedidaSelecionada}
-        />
-      );
-    }
+    // --------------------------------------------------------
+    // MODELO UNISSEX
+    // --------------------------------------------------------
 
     return (
       <UnisexBody
         medidas={medidas}
         medidaSelecionada={medidaSelecionada}
         onSelectMeasurement={setMedidaSelecionada}
+        onChangeMeasurement={alterarMedida}
       />
     );
   }
-
 
   // ==========================================================
   // INTERFACE
   // ==========================================================
 
+  // ============================================================
+  // INTERFACE DO EDITOR
+  // ============================================================
+  //
+  // Aqui organizamos visualmente:
+  //
+  // 1. Título do editor;
+  // 2. Seleção do modelo corporal;
+  // 3. Boneco;
+  // 4. Campos das medidas.
+  //
+  // A lógica das medidas continua exatamente a mesma.
+  // ============================================================
+
   return (
     <div
       style={{
+        // Ocupa toda a largura disponível.
         width: "100%",
-        maxWidth: "900px",
+
+        // Evita que o editor fique grande demais
+        // em telas muito largas.
+        maxWidth: "1000px",
+
+        // Centraliza o editor.
         margin: "0 auto",
-        padding: "24px",
+
+        // Mantém um espaçamento interno.
+        padding: "8px",
+
+        // Garante que padding não aumente
+        // a largura total do elemento.
         boxSizing: "border-box",
       }}
     >
 
-      {/* Título */}
-      <h2>Personalizar corpo</h2>
+      {/* ======================================================
+          TÍTULO DO EDITOR
+          ====================================================== */}
 
-      {/* Escolha do modelo */}
       <div
         style={{
-          display: "flex",
-          gap: "10px",
-          marginBottom: "24px",
+          marginBottom: "20px",
         }}
       >
-        <button
-          type="button"
-          onClick={() => alterarModelo("feminino")}
+        <h2
+          style={{
+            margin: 0,
+            fontSize: "22px",
+            fontWeight: 600,
+            color: "#262423",
+          }}
         >
-          Feminino
-        </button>
+          Personalizar seu corpo
+        </h2>
 
-        <button
-          type="button"
-          onClick={() => alterarModelo("masculino")}
+        <p
+          style={{
+            marginTop: "6px",
+            marginBottom: 0,
+            fontSize: "14px",
+            lineHeight: 1.5,
+            color: "#6f6870",
+          }}
         >
-          Masculino
-        </button>
-
-        <button
-          type="button"
-          onClick={() => alterarModelo("unissex")}
-        >
-          Unissex
-        </button>
+          Arraste as bolinhas do corpo para ajustar suas
+          medidas ou digite os valores ao lado.
+        </p>
       </div>
 
 
-      {/* Área principal */}
+      {/* ======================================================
+          ÁREA PRINCIPAL
+          ====================================================== */}
+
       <div
         style={{
-          display: "flex",
-          gap: "40px",
-          alignItems: "flex-start",
+          display: "grid",
+
+          // Em telas grandes:
+          // boneco à esquerda e medidas à direita.
+          gridTemplateColumns:
+            "minmax(300px, 1fr) minmax(240px, 320px)",
+
+          gap: "48px",
+
+          alignItems: "start",
+
           justifyContent: "center",
-          flexWrap: "wrap",
         }}
       >
 
-        {/* Corpo */}
-        <div>
-          {renderizarCorpo()}
-        </div>
+        {/* ====================================================
+            ÁREA DO BONECO
+            ==================================================== */}
 
-
-        {/* Medidas */}
         <div
           style={{
-            width: "240px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
+
+            // Garante uma área confortável
+            // para o boneco.
+            minHeight: "560px",
           }}
         >
-          <h3>Medidas</h3>
 
-          {/* Altura */}
-          <label>
-            Altura (cm)
+          {renderizarCorpo()}
 
-            <input
-              type="number"
-              min="1"
-              value={medidas.altura}
-              onChange={(event) =>
-                alterarMedida(
-                  "altura",
-                  Number(event.target.value)
-                )
-              }
-              onFocus={() => setMedidaSelecionada("altura")}
-            />
-          </label>
+        </div>
 
+        {/* ====================================================
+            PAINEL DE MEDIDAS
+            ==================================================== */}
 
-          {/* Ombros */}
-          <label>
-            Ombros (cm)
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "320px",
+          }}
+        >
 
-            <input
-              type="number"
-              min="1"
-              value={medidas.ombros}
-              onChange={(event) =>
-                alterarMedida(
-                  "ombros",
-                  Number(event.target.value)
-                )
-              }
-              onFocus={() => setMedidaSelecionada("ombros")}
-            />
-          </label>
+          {/* Título */}
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "18px",
+              fontWeight: 600,
+              color: "#262423",
+            }}
+          >
+            Suas medidas
+          </h3>
 
+          {/* Explicação */}
+          <p
+            style={{
+              marginTop: "6px",
+              marginBottom: "20px",
+              fontSize: "13px",
+              lineHeight: 1.5,
+              color: "#6f6870",
+            }}
+          >
+            Você pode ajustar os valores diretamente
+            pelos campos.
+          </p>
 
-          {/* Tórax */}
-          <label>
-            Tórax (cm)
+          {/* ==================================================
+              ALTURA
+              ================================================== */}
 
-            <input
-              type="number"
-              min="1"
-              value={medidas.torax ?? ""}
-              onChange={(event) =>
-                alterarMedida(
-                  "torax",
-                  Number(event.target.value)
-                )
-              }
-              onFocus={() => setMedidaSelecionada("torax")}
-            />
-          </label>
+          <div
+            style={{
+              marginBottom: "14px",
+            }}
+          >
 
+            <label
+              htmlFor="altura"
+              style={{
+                display: "block",
+                marginBottom: "6px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#402b47",
+              }}
+            >
+              Altura
+            </label>
 
-          {/* Cintura */}
-          <label>
-            Cintura (cm)
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
 
-            <input
-              type="number"
-              min="1"
-              value={medidas.cintura ?? ""}
-              onChange={(event) =>
-                alterarMedida(
-                  "cintura",
-                  Number(event.target.value)
-                )
-              }
-              onFocus={() => setMedidaSelecionada("cintura")}
-            />
-          </label>
+              <input
+                id="altura"
+                type="number"
+                min="1"
+                value={medidas.altura}
+                onChange={(event) =>
+                  alterarMedida(
+                    "altura",
+                    Number(event.target.value)
+                  )
+                }
+                onFocus={() =>
+                  setMedidaSelecionada("altura")
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #ddd5df",
+                  borderRadius: "10px",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#262423",
+                  boxSizing: "border-box",
+                }}
+              />
 
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "#6f6870",
+                }}
+              >
+                cm
+              </span>
 
-          {/* Quadril */}
-          <label>
-            Quadril (cm)
+            </div>
 
-            <input
-              type="number"
-              min="1"
-              value={medidas.quadril ?? ""}
-              onChange={(event) =>
-                alterarMedida(
-                  "quadril",
-                  Number(event.target.value)
-                )
-              }
-              onFocus={() => setMedidaSelecionada("quadril")}
-            />
-          </label>
+          </div>
+
+          {/* ==================================================
+              OMBROS
+              ================================================== */}
+
+          <div
+            style={{
+              marginBottom: "14px",
+            }}
+          >
+
+            <label
+              htmlFor="ombros"
+              style={{
+                display: "block",
+                marginBottom: "6px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#402b47",
+              }}
+            >
+              Ombros
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+
+              <input
+                id="ombros"
+                type="number"
+                min="1"
+                value={medidas.ombros}
+                onChange={(event) =>
+                  alterarMedida(
+                    "ombros",
+                    Number(event.target.value)
+                  )
+                }
+                onFocus={() =>
+                  setMedidaSelecionada("ombros")
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #ddd5df",
+                  borderRadius: "10px",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#262423",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "#6f6870",
+                }}
+              >
+                cm
+              </span>
+
+            </div>
+
+          </div>
+
+          {/* ==================================================
+              TÓRAX
+              ================================================== */}
+
+          <div
+            style={{
+              marginBottom: "14px",
+            }}
+          >
+
+            <label
+              htmlFor="torax"
+              style={{
+                display: "block",
+                marginBottom: "6px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#402b47",
+              }}
+            >
+              Tórax
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+
+              <input
+                id="torax"
+                type="number"
+                min="1"
+                value={medidas.torax ?? ""}
+                onChange={(event) =>
+                  alterarMedida(
+                    "torax",
+                    Number(event.target.value)
+                  )
+                }
+                onFocus={() =>
+                  setMedidaSelecionada("torax")
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #ddd5df",
+                  borderRadius: "10px",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#262423",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "#6f6870",
+                }}
+              >
+                cm
+              </span>
+
+            </div>
+
+          </div>
+
+          {/* ==================================================
+              CINTURA
+              ================================================== */}
+
+          <div
+            style={{
+              marginBottom: "14px",
+            }}
+          >
+
+            <label
+              htmlFor="cintura"
+              style={{
+                display: "block",
+                marginBottom: "6px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#402b47",
+              }}
+            >
+              Cintura
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+
+              <input
+                id="cintura"
+                type="number"
+                min="1"
+                value={medidas.cintura ?? ""}
+                onChange={(event) =>
+                  alterarMedida(
+                    "cintura",
+                    Number(event.target.value)
+                  )
+                }
+                onFocus={() =>
+                  setMedidaSelecionada("cintura")
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #ddd5df",
+                  borderRadius: "10px",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#262423",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "#6f6870",
+                }}
+              >
+                cm
+              </span>
+
+            </div>
+
+          </div>
+
+          {/* ==================================================
+              QUADRIL
+              ================================================== */}
+
+          <div
+            style={{
+              marginBottom: "0",
+            }}
+          >
+
+            <label
+              htmlFor="quadril"
+              style={{
+                display: "block",
+                marginBottom: "6px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#402b47",
+              }}
+            >
+              Quadril
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+
+              <input
+                id="quadril"
+                type="number"
+                min="1"
+                value={medidas.quadril ?? ""}
+                onChange={(event) =>
+                  alterarMedida(
+                    "quadril",
+                    Number(event.target.value)
+                  )
+                }
+                onFocus={() =>
+                  setMedidaSelecionada("quadril")
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #ddd5df",
+                  borderRadius: "10px",
+                  outline: "none",
+                  fontSize: "14px",
+                  color: "#262423",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <span
+                style={{
+                  fontSize: "13px",
+                  color: "#6f6870",
+                }}
+              >
+                cm
+              </span>
+
+            </div>
+
+          </div>
 
         </div>
 

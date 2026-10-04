@@ -1,30 +1,59 @@
-import { useState } from 'react';
-
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { AvatarViewer } from '@/components/avatar/AvatarViewer';
-import { useToast } from '@/components/ui/Toast';
-
-import {
-  mockMeasurements,
-  measurementLabels,
-  measurementRanges,
-} from '@/data/mock/mockMeasurements';
-
-import { mockAvatar } from '@/data/mock/mockAvatar';
-
-import type { Measurements } from '@/types';
-
-import { useAuth } from '@/context/AuthContext';
-
-import { saveMeasurements } from '@/services/firebase/measurements';
-
+import { useState } from 'react'; 
+import { DashboardLayout } from '@/components/layout/DashboardLayout'; 
+import { Card } from '@/components/ui/Card'; 
+import { Button } from '@/components/ui/Button'; 
+import { AvatarViewer } from '@/components/avatar/AvatarViewer'; 
+import { useToast } from '@/components/ui/Toast'; 
+import { mockAvatar } from '@/data/mock/mockAvatar'; 
+import type { UnisexMeasurements } from '@/types/measurements'; 
+import { useAuth } from '@/context/AuthContext'; 
+import { saveMeasurements } from '@/services/firebase/measurements'; 
 import { updateUserProfile } from '@/services/firebase/users';
+
+const defaultMeasurements: UnisexMeasurements = { 
+  altura: 168, 
+  ombros: 39, 
+  torax: 92, 
+  cintura: 74, 
+  quadril: 98, 
+};
+
+const measurementLabels: Record<keyof UnisexMeasurements, string> = { 
+  altura: 'Altura', 
+  ombros: 'Ombros', 
+  torax: 'Tórax', 
+  cintura: 'Cintura', 
+  quadril: 'Quadril', 
+};
+
+const measurementRanges: Record< keyof UnisexMeasurements, 
+{ min: number; max: number } > = 
+  { 
+    altura: { 
+    min: 140, 
+    max: 210 
+    }, 
+    ombros: { 
+      min: 30, 
+      max: 60 
+    }, 
+    torax: { 
+      min: 60, 
+      max: 140 
+    }, 
+    cintura: { 
+      min: 50, 
+      max: 130 
+    }, 
+    quadril: { 
+      min: 60, 
+      max: 150 
+    }, 
+  };
 
 export default function MeasurementsPage() {
   const [values, setValues] =
-    useState<Measurements>(mockMeasurements);
+    useState<UnisexMeasurements>(defaultMeasurements);
 
   const { show } = useToast();
 
@@ -32,7 +61,7 @@ export default function MeasurementsPage() {
 
   // Atualiza uma medida enquanto o usuário movimenta o controle.
   const handleChange = (
-    key: keyof Measurements,
+    key: keyof UnisexMeasurements,
     value: number
   ) => {
     setValues((prev) => ({
@@ -49,7 +78,7 @@ export default function MeasurementsPage() {
     }
 
     try {
-      await saveMeasurements(user.uid, values);
+      await saveMeasurements(user.uid, { medidas: values });
 
       await updateUserProfile(user.uid, {
         measurementsCompleted: true,
@@ -88,7 +117,7 @@ export default function MeasurementsPage() {
           </p>
 
           <div className="mt-6 space-y-5">
-            {(Object.keys(values) as (keyof Measurements)[]).map(
+            {(Object.keys(values) as (keyof UnisexMeasurements)[]).map(
               (key) => {
                 const range = measurementRanges[key];
 

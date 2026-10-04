@@ -8,22 +8,6 @@
 
 
 // ============================================================
-// MODELOS CORPORAIS
-// ============================================================
-
-/**
- * Modelos disponíveis no editor corporal.
- *
- * O modelo unissex funciona como uma opção neutra,
- * sem depender de feminino ou masculino.
- */
-export type BodyModel =
-  | "feminino"
-  | "masculino"
-  | "unissex";
-
-
-// ============================================================
 // NOMES DAS MEDIDAS
 // ============================================================
 
@@ -36,58 +20,6 @@ export type MeasurementName =
   | "torax"
   | "cintura"
   | "quadril";
-
-
-// ============================================================
-// MEDIDAS FEMININAS
-// ============================================================
-
-/**
- * Medidas utilizadas pelo modelo feminino.
- */
-export interface FemaleMeasurements {
-
-  /** Altura total do corpo em centímetros. */
-  altura: number;
-
-  /** Distância entre os ombros em centímetros. */
-  ombros: number;
-
-  /** Circunferência do busto/tórax em centímetros. */
-  torax?: number;
-
-  /** Circunferência da cintura em centímetros. */
-  cintura?: number;
-
-  /** Circunferência do quadril em centímetros. */
-  quadril?: number;
-}
-
-
-// ============================================================
-// MEDIDAS MASCULINAS
-// ============================================================
-
-/**
- * Medidas utilizadas pelo modelo masculino.
- */
-export interface MaleMeasurements {
-
-  /** Altura total do corpo em centímetros. */
-  altura: number;
-
-  /** Distância entre os ombros em centímetros. */
-  ombros: number;
-
-  /** Circunferência do tórax/peitoral em centímetros. */
-  torax?: number;
-
-  /** Circunferência da cintura em centímetros. */
-  cintura?: number;
-
-  /** Circunferência do quadril em centímetros. */
-  quadril?: number;
-}
 
 
 // ============================================================
@@ -125,13 +57,8 @@ export interface UnisexMeasurements {
  */
 export interface UserMeasurements {
 
-  /** Modelo escolhido pelo usuário. */
-  modelo: BodyModel;
-
   /** Medidas correspondentes ao modelo escolhido. */
   medidas:
-    | FemaleMeasurements
-    | MaleMeasurements
     | UnisexMeasurements;
 }
 
@@ -207,9 +134,6 @@ export interface DetailedBodyMeasurements {
  * Perfil corporal completo do usuário.
  */
 export interface BodyProfile {
-
-  /** Modelo corporal escolhido. */
-  modelo: BodyModel;
 
   /** Medidas detalhadas do corpo. */
   medidas: DetailedBodyMeasurements;
