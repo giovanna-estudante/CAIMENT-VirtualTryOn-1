@@ -594,22 +594,9 @@ function ClothingModel({
 
         console.log(
           '🎯 Shape Keys aplicadas:',
-          {
-            Cintura:
-              cinturaIndex !== undefined
-                ? influences[cinturaIndex]
-                : 0,
-
-            Tórax:
-              toraxIndex !== undefined
-                ? influences[toraxIndex]
-                : 0,
-
-            Ombros:
-              ombrosIndex !== undefined
-                ? influences[ombrosIndex]
-                : 0,
-          }
+          `Cintura=${cinturaIndex !== undefined ? influences[cinturaIndex].toFixed(3) : '0.000'}`,
+          `Tórax=${toraxIndex !== undefined ? influences[toraxIndex].toFixed(3) : '0.000'}`,
+          `Ombros=${ombrosIndex !== undefined ? influences[ombrosIndex].toFixed(3) : '0.000'}`
         );
       }
     );
@@ -926,13 +913,13 @@ function CameraController() {
   useEffect(() => {
     camera.position.set(
       0,
-      0.35,
+      1.7,
       5.2
     );
 
     camera.lookAt(
       0,
-      0.15,
+      1.7,
       0
     );
   }, [camera]);
@@ -1101,7 +1088,7 @@ export function AvatarViewer({
               }
               target={[
                 0,
-                0.15,
+                1.7,
                 0,
               ]}
             />
