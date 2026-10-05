@@ -1,3 +1,34 @@
+/*
+============================================================
+CAIMENT — AvatarViewer
+============================================================
+
+REGRA FIXA DE EIXOS DA ROUPA
+
+Blender/GLB → VSCode/Three.js
+
+GLB X → Three X = largura
+GLB Y → Three Z = profundidade
+GLB Z → Three Y = altura
+
+No AvatarViewer:
+
+X = largura
+Y = altura
+Z = profundidade
+
+IMPORTANTE:
+- Não trocar largura, altura e profundidade.
+- Não interpretar GLB Y como altura.
+- Não interpretar GLB Z como profundidade.
+- A conversão de eixos é feita pela orientação da roupa.
+- Depois da conversão, todo cálculo usa X/largura,
+  Y/altura e Z/profundidade.
+- As medidas cadastradas da camiseta permanecem com
+  os mesmos valores definidos no código.
+============================================================
+*/
+
 import {
   Suspense,
   useEffect,
@@ -67,6 +98,60 @@ interface AvatarFitData {
   center: Vector3;
 }
 
+// ============================================================
+// REGRA FIXA DE EIXOS — CAIMENT
+//
+// Blender/GLB → VSCode/Three.js:
+//
+// GLB X → Three X = largura
+// GLB Y → Three Z = profundidade
+// GLB Z → Three Y = altura
+//
+// Portanto, no VSCode:
+//
+// X = largura
+// Y = altura
+// Z = profundidade
+//
+// Esta conversão NÃO troca nem recalcula as medidas da roupa.
+// Ela somente coloca os eixos do GLB na convenção usada pelo
+// AvatarViewer.
+//
+// A rotação abaixo representa essa conversão de eixos.
+// Ela não é uma tentativa de corrigir o tamanho da camiseta.
+// ============================================================
+
+const CLOTHING_AXIS_ROTATION_X = -Math.PI / 2;
+
+interface ClothingMeasurements {
+  largura?: number;
+  profundidade?: number;
+  comprimento?: number;
+  torax?: number;
+  cintura?: number;
+  ombros?: number;
+  manga?: number;
+}
+
+type BodyMeasurementName =
+  | 'torax'
+  | 'cintura'
+  | 'ombros';
+
+interface ClothingShapeKeyConfig {
+  key: string;
+  measurement: BodyMeasurementName;
+}
+
+interface ClothingProfile {
+  measurements: ClothingMeasurements;
+  shapeKeys: ClothingShapeKeyConfig[];
+}
+
+// ============================================================
+// URL DO MODELO DO AVATAR
+// ============================================================
+
 function getModelProxyUrl(
   modelUrl: string
 ): string {
@@ -74,6 +159,10 @@ function getModelProxyUrl(
     modelUrl
   )}`;
 }
+
+// ============================================================
+// CARREGA O AVATAR
+// ============================================================
 
 function RealModel({
   url,
@@ -224,6 +313,10 @@ function RealModel({
   );
 }
 
+// ============================================================
+// AJUSTA O AVATAR
+// ============================================================
+
 function AvatarModelObject({
   model,
   onFitData,
@@ -240,15 +333,28 @@ function AvatarModelObject({
     const group =
       groupRef.current;
 
-    if (!group) {
+    if (!group || !model) {
       return;
     }
 
+    // Reseta transformações.
     group.scale.setScalar(1);
-    group.position.set(0, 0, 0);
+
+    group.position.set(
+      0,
+      0,
+      0
+    );
+
+    group.rotation.set(
+      0,
+      0,
+      0
+    );
 
     group.updateMatrixWorld(true);
 
+    // Mede o avatar original.
     const originalBox =
       new Box3().setFromObject(group);
 
@@ -259,17 +365,6 @@ function AvatarModelObject({
       originalSize
     );
 
-    console.log(
-      '📐 Avatar original:',
-      {
-        x: originalSize.x,
-        y: originalSize.y,
-        z: originalSize.z,
-      }
-    );
-
-    const targetHeight = 3.4;
-
     if (originalSize.y <= 0) {
       console.error(
         '❌ Altura do avatar inválida.'
@@ -277,6 +372,9 @@ function AvatarModelObject({
 
       return;
     }
+
+    // Altura padrão do avatar.
+    const targetHeight = 3.4;
 
     const scale =
       targetHeight /
@@ -292,16 +390,25 @@ function AvatarModelObject({
     const scaledCenter =
       new Vector3();
 
+    const scaledSize =
+      new Vector3();
+
     scaledBox.getCenter(
       scaledCenter
     );
 
+    scaledBox.getSize(
+      scaledSize
+    );
+
+    // Centraliza o avatar.
     group.position.x =
       -scaledCenter.x;
 
     group.position.z =
       -scaledCenter.z;
 
+    // Encosta os pés no chão.
     group.position.y =
       -scaledBox.min.y;
 
@@ -325,27 +432,58 @@ function AvatarModelObject({
     );
 
     console.log(
-      '📐 Avatar final:',
+      '===================================='
+    );
+
+    console.log(
+      '🧍 AVATAR AJUSTADO'
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '📐 Dimensão original:',
       {
-        tamanho: {
-          x: finalSize.x,
-          y: finalSize.y,
-          z: finalSize.z,
-        },
-        centro: {
-          x: finalCenter.x,
-          y: finalCenter.y,
-          z: finalCenter.z,
-        },
+        x: originalSize.x,
+        y: originalSize.y,
+        z: originalSize.z,
+      }
+    );
+
+    console.log(
+      '📐 Escala do avatar:',
+      scale
+    );
+
+    console.log(
+      '📐 Dimensão final:',
+      {
+        x: finalSize.x,
+        y: finalSize.y,
+        z: finalSize.z,
+      }
+    );
+
+    console.log(
+      '📍 Centro final:',
+      {
+        x: finalCenter.x,
+        y: finalCenter.y,
+        z: finalCenter.z,
       }
     );
 
     onFitData?.({
-      box: finalBox,
-      size: finalSize,
-      center: finalCenter,
+      box: finalBox.clone(),
+      size: finalSize.clone(),
+      center: finalCenter.clone(),
     });
-  }, [model, onFitData]);
+  }, [
+    model,
+    onFitData,
+  ]);
 
   return (
     <group ref={groupRef}>
@@ -353,6 +491,10 @@ function AvatarModelObject({
     </group>
   );
 }
+
+// ============================================================
+// CARREGA E VESTE A ROUPA
+// ============================================================
 
 function ClothingModel({
   url,
@@ -368,6 +510,10 @@ function ClothingModel({
 
   const groupRef =
     useRef<Group | null>(null);
+
+  // ----------------------------------------------------------
+  // Carrega o GLB da roupa.
+  // ----------------------------------------------------------
 
   useEffect(() => {
     let cancelled = false;
@@ -432,8 +578,13 @@ function ClothingModel({
     };
   }, [url]);
 
+  // ----------------------------------------------------------
+  // Ajusta a roupa.
+  // ----------------------------------------------------------
+
   useEffect(() => {
-    const group = groupRef.current;
+    const group =
+      groupRef.current;
 
     if (!group || !model) {
       return;
@@ -443,243 +594,212 @@ function ClothingModel({
       console.warn(
         '⚠️ Medidas do usuário não disponíveis.'
       );
+
       return;
     }
 
-    const medidas = measurements;
+    const medidas =
+      measurements;
 
-    group.scale.setScalar(1);
-    group.position.set(0, 0, 0);
-    group.rotation.set(0, 0, 0);
-    group.updateMatrixWorld(true);
+    // ========================================================
+    // CADASTRO DA CAMISETA P
+    // ========================================================
 
-    model.traverse((child) => {
-      const mesh = child as Mesh;
+    const CAMISETA_P: ClothingProfile = {
+      measurements: {
+        largura: 100,
+        profundidade: 29.7,
+        comprimento: 70,
+        manga: 23,
+      },
 
-      if (
-        !mesh.isMesh ||
-        !mesh.morphTargetDictionary ||
-        !mesh.morphTargetInfluences
-      ) {
-        return;
-      }
-
-      const dictionary =
-        mesh.morphTargetDictionary;
-
-      const influences =
-        mesh.morphTargetInfluences;
-
-      const calcularInfluence = (
-        medida: number,
-        minimo: number,
-        maximo: number
-      ) => {
-        if (maximo <= minimo) {
-          return 0;
-        }
-
-        return Math.max(
-          0,
-          Math.min(
-            1,
-            (medida - minimo) /
-              (maximo - minimo)
-          )
-        );
-      };
-
-      const zerarShapeKey = (
-        nome: string
-      ) => {
-        const index = dictionary[nome];
-
-        if (index !== undefined) {
-          influences[index] = 0;
-        }
-      };
-
-      [
-        'Cintura',
-        'Tórax',
-        'Manga',
-        'Ombros',
-        'Gola',
-        'Caimento',
-        'Barra',
-        'Ajuste lateral',
-        'Busto',
-      ].forEach(zerarShapeKey);
-
-      const cinturaIndex =
-        dictionary['Cintura'];
-
-      if (
-        cinturaIndex !== undefined &&
-        medidas.cintura !== undefined
-      ) {
-        influences[cinturaIndex] =
-          calcularInfluence(
-            medidas.cintura,
-            60,
-            100
-          );
-      }
-
-      const toraxIndex =
-        dictionary['Tórax'];
-
-      if (
-        toraxIndex !== undefined &&
-        medidas.torax !== undefined
-      ) {
-        influences[toraxIndex] =
-          calcularInfluence(
-            medidas.torax,
-            70,
-            120
-          );
-      }
-
-      const ombrosIndex =
-        dictionary['Ombros'];
-
-      if (ombrosIndex !== undefined) {
-        influences[ombrosIndex] =
-          calcularInfluence(
-            medidas.ombros,
-            30,
-            55
-          );
-      }
-
-      const bustoIndex =
-        dictionary['Busto'];
-
-      if (
-        bustoIndex !== undefined &&
-        medidas.torax !== undefined
-      ) {
-        influences[bustoIndex] =
-          calcularInfluence(
-            medidas.torax,
-            70,
-            120
-          );
-      }
-
-      /*
-      * Caimento:
-      * 0 = P
-      * 1 = GG
-      *
-      * A camiseta passa de:
-      * X = 0.499 -> 0.749 m
-      * Y = 0.297 -> 0.444 m
-      * Z = 0.699 -> 1.050 m
-      *
-      * O tórax é usado como referência
-      * para escolher o tamanho geral.
-      */
-      const caimentoIndex =
-        dictionary['Caimento'];
-
-      if (
-        caimentoIndex !== undefined &&
-        medidas.torax !== undefined
-      ) {
-        influences[caimentoIndex] =
-          calcularInfluence(
-            medidas.torax,
-            92,
-            140
-          );
-      }
-
-      console.log(
-        '🎯 Shape Keys aplicadas:',
+      shapeKeys: [
         {
-          Cintura:
-            cinturaIndex !== undefined
-              ? influences[cinturaIndex]
-              : 0,
+          key: 'Tórax',
+          measurement: 'torax',
+        },
+        {
+          key: 'Busto',
+          measurement: 'torax',
+        },
+        {
+          key: 'Cintura',
+          measurement: 'cintura',
+        },
+        {
+          key: 'Ajuste lateral',
+          measurement: 'cintura',
+        },
+        {
+          key: 'Ombros',
+          measurement: 'ombros',
+        },
+      ],
+    };
 
-          Tórax:
-            toraxIndex !== undefined
-              ? influences[toraxIndex]
-              : 0,
+    // ========================================================
+    // RESET
+    // ========================================================
 
-          Ombros:
-            ombrosIndex !== undefined
-              ? influences[ombrosIndex]
-              : 0,
+    group.scale.set(
+      1,
+      1,
+      1
+    );
 
-          Busto:
-            bustoIndex !== undefined
-              ? influences[bustoIndex]
-              : 0,
+    group.position.set(
+      0,
+      0,
+      0
+    );
 
-          Caimento:
-            caimentoIndex !== undefined
-              ? influences[caimentoIndex]
-              : 0,
-        }
-      );
-    });
+    group.rotation.set(
+      0,
+      0,
+      0
+    );
 
     group.updateMatrixWorld(true);
 
-    const box =
-      new Box3().setFromObject(group);
+    // ========================================================
+    // ZERA TODAS AS SHAPE KEYS
+    // ========================================================
 
-    const size =
-      new Vector3();
+    model.traverse(
+      (child) => {
+        const mesh =
+          child as Mesh;
 
-    box.getSize(size);
+        if (
+          !mesh.isMesh ||
+          !mesh.morphTargetInfluences
+        ) {
+          return;
+        }
 
-    console.log(
-      '👕 Tamanho após Shape Keys:',
-      {
-        x: size.x,
-        y: size.y,
-        z: size.z,
+        mesh.morphTargetInfluences.fill(0);
       }
     );
 
-    /*
-    * NÃO ALTERAR ESTE TRECHO.
-    */
-    if (
-      size.z > size.y * 1.3
-    ) {
-      group.rotation.x =
-        -Math.PI / 2;
-    }
+    // ========================================================
+    // APLICA SHAPE KEYS
+    // ========================================================
 
-    group.rotation.y =
-      Math.PI / 2;
+    for (
+      const config of CAMISETA_P.shapeKeys
+    ) {
+      const valorCorpo =
+        medidas[
+          config.measurement
+        ];
+
+      const valorRoupa =
+        CAMISETA_P.measurements[
+          config.measurement
+        ];
+
+      // Só aplica se a roupa tiver
+      // uma medida correspondente.
+      if (
+        valorCorpo === undefined ||
+        valorRoupa === undefined ||
+        valorRoupa <= 0
+      ) {
+        continue;
+      }
+
+      const proporcao =
+        valorCorpo /
+        valorRoupa;
+
+      const diferenca =
+        Math.abs(
+          proporcao - 1
+        );
+
+      const influencia =
+        Math.min(
+          1,
+          diferenca
+        );
+
+      model.traverse(
+        (child) => {
+          const mesh =
+            child as Mesh;
+
+          if (
+            !mesh.isMesh ||
+            !mesh.morphTargetDictionary ||
+            !mesh.morphTargetInfluences
+          ) {
+            return;
+          }
+
+          const index =
+            mesh.morphTargetDictionary[
+              config.key
+            ];
+
+          if (
+            index !== undefined
+          ) {
+            mesh.morphTargetInfluences[
+              index
+            ] = influencia;
+          }
+        }
+      );
+    }
 
     group.updateMatrixWorld(true);
 
+    // ========================================================
+    // ORIENTAÇÃO
+    //
+    // GLB X → Three X = largura
+    // GLB Y → Three Z = profundidade
+    // GLB Z → Three Y = altura
+    //
+    // A camiseta é rotacionada ANTES da medição.
+    // ========================================================
+
+    group.rotation.set(
+      CLOTHING_AXIS_ROTATION_X,
+      0,
+      0
+    );
+
+    group.updateMatrixWorld(true);
+
+    // ========================================================
+    // MEDE A ROUPA JÁ ORIENTADA
+    // ========================================================
+
     const orientedBox =
-      new Box3().setFromObject(group);
+      new Box3().setFromObject(
+        group
+      );
 
     const orientedSize =
       new Vector3();
-
     orientedBox.getSize(
       orientedSize
     );
-
-    const orientedCenter =
-      new Vector3();
-
-    orientedBox.getCenter(
-      orientedCenter
+    console.log(
+      '===================================='
     );
 
     console.log(
-      '👕 Tamanho no eixo do Viewer:',
+      '👕 ROUPA APÓS ORIENTAÇÃO'
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '📐 Dimensão antes da escala:',
       {
         x: orientedSize.x,
         y: orientedSize.y,
@@ -687,75 +807,174 @@ function ClothingModel({
       }
     );
 
-    if (orientedSize.y <= 0) {
+    if (
+      orientedSize.x <= 0 ||
+      orientedSize.y <= 0 ||
+      orientedSize.z <= 0
+    ) {
       console.error(
-        '❌ Altura da roupa inválida.'
+        '❌ Dimensão orientada da roupa inválida.'
       );
+
       return;
     }
 
-    const escalaAvatar =
-      avatarFitData.size.y /
-      (medidas.altura / 100);
+    // ========================================================
+    // DIMENSÕES ALVO
+    //
+    // Aqui já estamos usando os eixos do Three.js:
+    //
+    // X = largura
+    // Y = altura
+    // Z = profundidade
+    // ========================================================
 
-    const comprimentoCamiseta =
-      0.70 * escalaAvatar;
+    const larguraAlvo =
+      (
+        CAMISETA_P.measurements.largura ??
+        orientedSize.x * 100
+      ) / 100;
 
-    const clothingScale =
-      comprimentoCamiseta /
+    const alturaAlvo =
+      (
+        CAMISETA_P.measurements.comprimento ??
+        orientedSize.y * 100
+      ) / 100;
+
+    const profundidadeAlvo =
+      (
+        CAMISETA_P.measurements.profundidade ??
+        orientedSize.z * 100
+      ) / 100;
+
+    // ========================================================
+    // ESCALA
+    //
+    // Calculada depois da orientação.
+    //
+    // Não usamos a escala do avatar.
+    // ========================================================
+
+    const escalaLargura =
+      larguraAlvo /
+      orientedSize.x;
+
+    const escalaAltura =
+      alturaAlvo /
       orientedSize.y;
 
-    group.scale.setScalar(
-      clothingScale
+    const escalaProfundidade =
+      profundidadeAlvo /
+      orientedSize.z;
+
+    group.scale.set(
+      escalaLargura,
+      escalaAltura,
+      escalaProfundidade
     );
 
     group.updateMatrixWorld(true);
 
+    // ========================================================
+    // MEDE NOVAMENTE DEPOIS DA ESCALA
+    // ========================================================
+
     const scaledBox =
-      new Box3().setFromObject(group);
+      new Box3().setFromObject(
+        group
+      );
+
+    const scaledSize =
+      new Vector3();
 
     const scaledCenter =
       new Vector3();
+
+    scaledBox.getSize(
+      scaledSize
+    );
 
     scaledBox.getCenter(
       scaledCenter
     );
 
-    const alturaOmbrosCm =
-      medidas.alturaPeCintura +
-      medidas.alturaCinturaOmbros;
+    // ========================================================
+    // POSIÇÃO DOS OMBROS
+    // ========================================================
 
-    const alturaOmbrosAvatar =
-      (alturaOmbrosCm / 100) *
-      escalaAvatar;
+    let alturaOmbros =
+      avatarFitData.size.y *
+      0.68;
+
+    if (
+      medidas.altura !== undefined &&
+      medidas.altura > 0 &&
+      medidas.alturaPeCintura !== undefined &&
+      medidas.alturaCinturaOmbros !== undefined
+    ) {
+      const alturaOmbrosCm =
+        medidas.alturaPeCintura +
+        medidas.alturaCinturaOmbros;
+
+      alturaOmbros =
+        (
+          alturaOmbrosCm /
+          medidas.altura
+        ) *
+        avatarFitData.size.y;
+    }
 
     const topoCamiseta =
       avatarFitData.box.min.y +
-      alturaOmbrosAvatar;
+      alturaOmbros;
 
-    group.position.y =
+    const centroCamisetaY =
       topoCamiseta -
-      scaledBox.max.y;
+      scaledSize.y / 2;
 
-    group.position.x =
+    // ========================================================
+    // CENTRALIZA NO AVATAR
+    // ========================================================
+
+    group.position.set(
       avatarFitData.center.x -
-      scaledCenter.x;
+        scaledCenter.x,
 
-    group.position.z =
+      centroCamisetaY -
+        scaledCenter.y,
+
       avatarFitData.center.z -
-      scaledCenter.z;
+        scaledCenter.z
+    );
 
     group.updateMatrixWorld(true);
 
-    const finalClothingBox =
-      new Box3().setFromObject(group);
+    // ========================================================
+    // DIMENSÃO FINAL
+    // ========================================================
 
-    const finalClothingSize =
+    const finalBox =
+      new Box3().setFromObject(
+        group
+      );
+
+    const finalSize =
       new Vector3();
 
-    finalClothingBox.getSize(
-      finalClothingSize
+    const finalCenter =
+      new Vector3();
+
+    finalBox.getSize(
+      finalSize
     );
+
+    finalBox.getCenter(
+      finalCenter
+    );
+
+    // ========================================================
+    // LOGS
+    // ========================================================
 
     console.log(
       '===================================='
@@ -770,36 +989,101 @@ function ClothingModel({
     );
 
     console.log(
-      '📏 Medidas usadas:',
-      medidas
-    );
-
-    console.log(
-      '📐 Altura dos ombros:',
-      `${alturaOmbrosCm.toFixed(1)} cm`
-    );
-
-    console.log(
-      '📐 Escala do avatar:',
-      escalaAvatar
-    );
-
-    console.log(
-      '📐 Tamanho final:',
+      '🔄 REGRA FIXA DE EIXOS:',
       {
-        x: finalClothingSize.x,
-        y: finalClothingSize.y,
-        z: finalClothingSize.z,
+        'GLB X → Three X':
+          'largura',
+
+        'GLB Y → Three Z':
+          'profundidade',
+
+        'GLB Z → Three Y':
+          'altura',
+
+        'Three X':
+          'largura',
+
+        'Three Y':
+          'altura',
+
+        'Three Z':
+          'profundidade',
       }
     );
 
     console.log(
-      '📍 Posição final:',
+      '🔄 Conversão de eixos aplicada:',
+      '-90° no eixo X'
+    );
+
+    console.log(
+      '📏 Cadastro da roupa:',
+      CAMISETA_P.measurements
+    );
+
+    console.log(
+      '📐 Dimensão orientada:',
       {
-        x: group.position.x,
-        y: group.position.y,
-        z: group.position.z,
+        largura:
+          orientedSize.x,
+
+        altura:
+          orientedSize.y,
+
+        profundidade:
+          orientedSize.z,
       }
+    );
+
+    console.log(
+      '📐 Escalas aplicadas:',
+      {
+        largura:
+          escalaLargura,
+
+        altura:
+          escalaAltura,
+
+        profundidade:
+          escalaProfundidade,
+      }
+    );
+
+    console.log(
+      '🎯 Dimensão alvo:',
+      {
+        largura:
+          larguraAlvo,
+
+        altura:
+          alturaAlvo,
+
+        profundidade:
+          profundidadeAlvo,
+      }
+    );
+
+    console.log(
+      '📐 Dimensão final:',
+      {
+        x: finalSize.x,
+        y: finalSize.y,
+        z: finalSize.z,
+      }
+    );
+
+    console.log(
+      '📍 Centro final:',
+      {
+        x: finalCenter.x,
+        y: finalCenter.y,
+        z: finalCenter.z,
+      }
+    );
+
+    console.log(
+      '📍 Altura usada para posicionamento:',
+      alturaOmbros
     );
   }, [
     model,
@@ -818,6 +1102,10 @@ function ClothingModel({
   );
 }
 
+// ============================================================
+// CENA
+// ============================================================
+
 function Scene({
   modelUrl,
   clothingModelUrl,
@@ -834,9 +1122,10 @@ function Scene({
   const [
     avatarFitData,
     setAvatarFitData,
-  ] = useState<AvatarFitData | null>(
-    null
-  );
+  ] =
+    useState<AvatarFitData | null>(
+      null
+    );
 
   return (
     <>
@@ -848,7 +1137,9 @@ function Scene({
         ]}
       />
 
-      <ambientLight intensity={0.4} />
+      <ambientLight
+        intensity={0.4}
+      />
 
       <directionalLight
         position={[3, 5, 4]}
@@ -871,8 +1162,12 @@ function Scene({
         {modelUrl ? (
           <RealModel
             url={modelUrl}
-            onLoaded={onAvatarLoaded}
-            onError={onAvatarError}
+            onLoaded={
+              onAvatarLoaded
+            }
+            onError={
+              onAvatarError
+            }
             onFitData={
               setAvatarFitData
             }
@@ -884,8 +1179,12 @@ function Scene({
         {clothingModelUrl &&
           avatarFitData && (
             <ClothingModel
-              url={clothingModelUrl}
-              measurements={measurements}
+              url={
+                clothingModelUrl
+              }
+              measurements={
+                measurements
+              }
               avatarFitData={
                 avatarFitData
               }
@@ -903,6 +1202,10 @@ function Scene({
     </>
   );
 }
+
+// ============================================================
+// CONTROLE DA CÂMERA
+// ============================================================
 
 function CameraController() {
   const { camera } =
@@ -924,6 +1227,10 @@ function CameraController() {
 
   return null;
 }
+
+// ============================================================
+// AVATAR VIEWER
+// ============================================================
 
 export function AvatarViewer({
   modelUrl,
@@ -953,14 +1260,20 @@ export function AvatarViewer({
     setReady(false);
   }, [modelUrl]);
 
+  // ----------------------------------------------------------
+  // Reseta a câmera.
+  // ----------------------------------------------------------
+
   const handleReset = () => {
-    const controls = controlsRef.current;
+    const controls =
+      controlsRef.current;
 
     if (!controls) {
       return;
     }
 
-    const camera = controls.object;
+    const camera =
+      controls.object;
 
     camera.position.set(
       0,
@@ -976,6 +1289,10 @@ export function AvatarViewer({
 
     controls.update();
   };
+
+  // ----------------------------------------------------------
+  // Zoom.
+  // ----------------------------------------------------------
 
   const handleZoom = (
     dir: 1 | -1
@@ -1124,7 +1441,9 @@ export function AvatarViewer({
               aria-label="Diminuir zoom"
               className="flex h-8 w-8 items-center justify-center rounded-full text-caiment-ink-soft hover:bg-white/70"
             >
-              <ZoomOut size={15} />
+              <ZoomOut
+                size={15}
+              />
             </button>
 
             <button
@@ -1134,7 +1453,9 @@ export function AvatarViewer({
               aria-label="Resetar câmera"
               className="flex h-8 w-8 items-center justify-center rounded-full text-caiment-ink-soft hover:bg-white/70"
             >
-              <RotateCcw size={15} />
+              <RotateCcw
+                size={15}
+              />
             </button>
 
             <button
@@ -1144,7 +1465,9 @@ export function AvatarViewer({
               aria-label="Aumentar zoom"
               className="flex h-8 w-8 items-center justify-center rounded-full text-caiment-ink-soft hover:bg-white/70"
             >
-              <ZoomIn size={15} />
+              <ZoomIn
+                size={15}
+              />
             </button>
           </div>
         )}

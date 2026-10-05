@@ -50,9 +50,10 @@ export async function uploadImage(
 
   const formData = new FormData();
 
-  const blob = new Blob([file.buffer], {
-    type: file.mimetype,
-  });
+  const blob = new Blob(
+  [new Uint8Array(file.buffer)],
+  { type: file.mimetype }
+);
 
   formData.append(
     'file',
@@ -344,8 +345,17 @@ export async function downloadModel(
     if (!response.ok) {
       const text = await response.text();
 
+      console.error(
+        `❌ Tripo recusou o download: HTTP ${response.status} ${response.statusText}`
+      );
+
+      console.error(
+        '📄 Resposta da Tripo:',
+        text
+      );
+
       throw new Error(
-        `Tripo recusou o download do modelo (${response.status}): ${text}`
+        `Tripo recusou o download do modelo (${response.status} ${response.statusText}): ${text}`
       );
     }
 
