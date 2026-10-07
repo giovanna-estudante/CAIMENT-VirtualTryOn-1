@@ -128,10 +128,6 @@ interface ClothingMeasurements {
   largura?: number;
   profundidade?: number;
   comprimento?: number;
-  torax?: number;
-  busto?: number;
-  cintura?: number;
-  ombros?: number;
   manga?: number;
 }
 
@@ -946,28 +942,26 @@ function ClothingModel({
     // ========================================================
 
     const SHAPE_KEY_CALIBRATION = {
+      Tórax: {
+        measurement: 'torax',
+        delta: 0.5,
+      },
 
-    Tórax: {
-      measurement: 'torax',
-      delta: 8,
-    },
+      Busto: {
+        measurement: 'busto',
+        delta: 2,
+      },
 
-    Busto: {
-      measurement: 'busto',
-      delta: 2,
-    },
+      Cintura: {
+        measurement: 'cintura',
+        delta: 0,
+      },
 
-    Cintura: {
-      measurement: 'cintura',
-      delta: 8,
-    },
-
-    Ombros: {
-      measurement: 'ombros',
-      delta: 5,
-    },
-
-  } as const;
+      Ombros: {
+        measurement: 'ombros',
+        delta: 0,
+      },
+    } as const;
 
 
     // ========================================================
@@ -1041,43 +1035,28 @@ function ClothingModel({
     // amplitude física.
     // ========================================================
 
-    const calcularInfluenciaFisica = (
+    const calcularInfluenciaShapeKey = (
       medidaUsuario: number | undefined,
-      medidaRoupa: number | undefined,
+      referencia: number,
       deltaShapeKey: number
     ) => {
-
       if (
         medidaUsuario === undefined ||
-        medidaRoupa === undefined ||
         medidaUsuario <= 0 ||
-        medidaRoupa <= 0 ||
         deltaShapeKey <= 0
       ) {
         return 0;
       }
 
       const necessidade =
-        medidaUsuario -
-        medidaRoupa;
+        medidaUsuario - referencia;
 
-      // ------------------------------------------------------
-      // Se o usuário não precisa aumentar essa região,
-      // esta Shape Key positiva não deve ser aplicada.
-      //
-      // Isso é importante porque não queremos transformar
-      // uma diferença negativa em uma influência positiva.
-      // ------------------------------------------------------
-
-      if (
-        necessidade <= 0
-      ) {
+      if (necessidade <= 0) {
         return 0;
       }
 
       const influencia =
-        necessidade /
-        deltaShapeKey;
+        necessidade / deltaShapeKey;
 
       return Math.max(
         0,
