@@ -117,11 +117,12 @@ interface AvatarFitData {
 // Ela somente coloca os eixos do GLB na convenção usada pelo
 // AvatarViewer.
 //
-// A rotação abaixo representa essa conversão de eixos.
-// Ela não é uma tentativa de corrigir o tamanho da camiseta.
+// A rotação abaixo é somente o alinhamento visual da camiseta
+// com a orientação do avatar no Canvas.
+// Ela não altera os significados de X, Y e Z.
 // ============================================================
 
-const CLOTHING_AXIS_ROTATION_X = -Math.PI / 2;
+const CLOTHING_VISUAL_ROTATION_Y = Math.PI / 2;
 
 interface ClothingMeasurements {
   largura?: number;
@@ -143,9 +144,14 @@ interface ClothingShapeKeyConfig {
   measurement: BodyMeasurementName;
 }
 
+type ClothingPlacement =
+  | 'ombros'
+  | 'cintura';
+
 interface ClothingProfile {
   measurements: ClothingMeasurements;
   shapeKeys: ClothingShapeKeyConfig[];
+  placement: ClothingPlacement;
 }
 
 // ============================================================
@@ -613,6 +619,12 @@ function ClothingModel({
         manga: 23,
       },
 
+      // REGRA DE POSICIONAMENTO DA PEÇA:
+      // camiseta começa na região dos ombros.
+      // Esta regra serve SOMENTE para posicionar a roupa.
+      // Ela não participa do cálculo da escala.
+      placement: 'ombros',
+
       shapeKeys: [
         {
           key: 'Tórax',
@@ -765,8 +777,8 @@ function ClothingModel({
     // ========================================================
 
     group.rotation.set(
-      CLOTHING_AXIS_ROTATION_X,
       0,
+      CLOTHING_VISUAL_ROTATION_Y,
       0
     );
 
@@ -820,57 +832,64 @@ function ClothingModel({
     }
 
     // ========================================================
-    // DIMENSÕES ALVO
+    // ESCALA DA CAMISETA
     //
-    // Aqui já estamos usando os eixos do Three.js:
+    // A escala usa SOMENTE a altura inteira do avatar e a
+    // altura inteira cadastrada do usuário.
     //
-    // X = largura
-    // Y = altura
-    // Z = profundidade
+    // A camiseta P possui 70 cm de comprimento.
+    // Exemplo: avatar = 3,4 m e usuário = 168 cm:
+    // 3,4 × (70 / 168) = 1,4167 m.
+    //
+    // A dimensão do GLB não é tratada como os 70 cm físicos.
+    // Ela é usada somente como base para descobrir a escala
+    // necessária para chegar à altura alvo.
     // ========================================================
 
-    const larguraAlvo =
-      (
-        CAMISETA_P.measurements.largura ??
-        orientedSize.x * 100
-      ) / 100;
+    const alturaAvatar =
+      avatarFitData.size.y;
+
+    const alturaUsuarioCm =
+      medidas.altura;
+
+    if (
+      alturaUsuarioCm === undefined ||
+      alturaUsuarioCm <= 0
+    ) {
+      console.error(
+        '❌ Altura inteira do usuário inválida para calcular a escala da camiseta.'
+      );
+
+      return;
+    }
+
+    const alturaCamisetaCatalogoCm =
+      CAMISETA_P.measurements.comprimento ??
+      70;
+
+    const alturaCamisetaCatalogoM =
+      alturaCamisetaCatalogoCm / 100;
 
     const alturaAlvo =
+      alturaAvatar *
       (
-        CAMISETA_P.measurements.comprimento ??
-        orientedSize.y * 100
-      ) / 100;
+        alturaCamisetaCatalogoM /
+        (alturaUsuarioCm / 100)
+      );
 
-    const profundidadeAlvo =
-      (
-        CAMISETA_P.measurements.profundidade ??
-        orientedSize.z * 100
-      ) / 100;
+    // A referência física do modelo P no Blender é 70 cm.
+    // Não usamos orientedSize.y porque ele é medido depois
+    // da rotação visual e não representa necessariamente
+    // o comprimento físico da camiseta.
+    const alturaBaseCamisetaM =
+      0.70;
 
-    // ========================================================
-    // ESCALA
-    //
-    // Calculada depois da orientação.
-    //
-    // Não usamos a escala do avatar.
-    // ========================================================
-
-    const escalaLargura =
-      larguraAlvo /
-      orientedSize.x;
-
-    const escalaAltura =
+    const escalaUniforme =
       alturaAlvo /
-      orientedSize.y;
+      alturaBaseCamisetaM;
 
-    const escalaProfundidade =
-      profundidadeAlvo /
-      orientedSize.z;
-
-    group.scale.set(
-      escalaLargura,
-      escalaAltura,
-      escalaProfundidade
+    group.scale.setScalar(
+      escalaUniforme
     );
 
     group.updateMatrixWorld(true);
@@ -899,37 +918,85 @@ function ClothingModel({
     );
 
     // ========================================================
-    // POSIÇÃO DOS OMBROS
+    // POSICIONAMENTO DA ROUPA — SOMENTE POSICIONAMENTO
+    //
+    // IMPORTANTE:
+    // alturaPeCintura e alturaCinturaOmbros NÃO participam
+    // da escala da roupa, não criam limite de tamanho e não
+    // substituem a altura total do usuário.
+    //
+    // Elas servem apenas para descobrir ONDE a peça começa
+    // no corpo do avatar.
+    //
+    // CAMISETA:
+    // - começa na região dos ombros;
+    // - alturaPeCintura + alturaCinturaOmbros = altura dos
+    //   ombros medida a partir dos pés;
+    // - acrescentamos uma pequena folga acima dos ombros
+    //   para evitar que a gola atravesse o avatar.
+    //
+    // CALÇA:
+    // - começa na cintura;
+    // - usa somente alturaPeCintura.
+    //
+    // VESTIDO:
+    // - começa na região dos ombros;
+    // - usa a mesma referência de ombros da camiseta.
+    //
+    // A escala continua sendo calculada ANTES e continua
+    // usando somente a altura total do avatar + altura total
+    // cadastrada do usuário + altura física da peça.
     // ========================================================
 
-    let alturaOmbros =
-      avatarFitData.size.y *
-      0.68;
+    let alturaReferenciaCm: number;
+    let folgaSuperiorCm = 0;
 
-    if (
-      medidas.altura !== undefined &&
-      medidas.altura > 0 &&
-      medidas.alturaPeCintura !== undefined &&
-      medidas.alturaCinturaOmbros !== undefined
-    ) {
-      const alturaOmbrosCm =
-        medidas.alturaPeCintura +
-        medidas.alturaCinturaOmbros;
+    if (CAMISETA_P.placement === 'ombros') {
+      // Para peças que começam nos ombros, a distância desde
+      // os pés até os ombros é a soma dessas duas medidas.
+      if (
+        medidas.alturaPeCintura !== undefined &&
+        medidas.alturaCinturaOmbros !== undefined
+      ) {
+        alturaReferenciaCm =
+          medidas.alturaPeCintura +
+          medidas.alturaCinturaOmbros;
+      } else {
+        // Fallback apenas de posicionamento caso as duas
+        // medidas do ponto dos ombros não estejam disponíveis.
+        alturaReferenciaCm =
+          medidas.altura * 0.68;
+      }
 
-      alturaOmbros =
-        (
-          alturaOmbrosCm /
-          medidas.altura
-        ) *
-        avatarFitData.size.y;
+      // A camiseta começa um pouco acima dos ombros.
+      // Esta folga também é SOMENTE posicionamento.
+      folgaSuperiorCm = 2;
+    } else {
+      // Para uma calça, a referência é diretamente a cintura.
+      // Esta regra não é usada pela camiseta atual, mas fica
+      // explícita para quando outro tipo de peça for incluído.
+      alturaReferenciaCm =
+        medidas.alturaPeCintura ??
+        medidas.altura * 0.5;
     }
 
-    const topoCamiseta =
-      avatarFitData.box.min.y +
-      alturaOmbros;
+    const alturaReferencia =
+      (alturaReferenciaCm / medidas.altura) *
+      avatarFitData.size.y;
 
-    const centroCamisetaY =
-      topoCamiseta -
+    const folgaSuperior =
+      (folgaSuperiorCm / medidas.altura) *
+      avatarFitData.size.y;
+
+    // O ponto calculado acima é usado somente para definir
+    // onde fica o topo da peça no avatar.
+    const topoRoupa =
+      avatarFitData.box.min.y +
+      alturaReferencia +
+      folgaSuperior;
+
+    const centroRoupaY =
+      topoRoupa -
       scaledSize.y / 2;
 
     // ========================================================
@@ -940,7 +1007,7 @@ function ClothingModel({
       avatarFitData.center.x -
         scaledCenter.x,
 
-      centroCamisetaY -
+      centroRoupaY -
         scaledCenter.y,
 
       avatarFitData.center.z -
@@ -1012,8 +1079,8 @@ function ClothingModel({
     );
 
     console.log(
-      '🔄 Conversão de eixos aplicada:',
-      '-90° no eixo X'
+      '🔄 Alinhamento visual aplicado:',
+      '+90° no eixo Y'
     );
 
     console.log(
@@ -1036,31 +1103,33 @@ function ClothingModel({
     );
 
     console.log(
-      '📐 Escalas aplicadas:',
-      {
-        largura:
-          escalaLargura,
-
-        altura:
-          escalaAltura,
-
-        profundidade:
-          escalaProfundidade,
-      }
+      '📐 Escala uniforme:',
+      escalaUniforme
     );
 
     console.log(
-      '🎯 Dimensão alvo:',
-      {
-        largura:
-          larguraAlvo,
+      '📐 Altura física base da camiseta:',
+      alturaBaseCamisetaM
+    );
 
-        altura:
-          alturaAlvo,
+    console.log(
+      '🎯 Altura alvo da camiseta:',
+      alturaAlvo
+    );
 
-        profundidade:
-          profundidadeAlvo,
-      }
+    console.log(
+      '🧍 Altura inteira do avatar:',
+      alturaAvatar
+    );
+
+    console.log(
+      '🧍 Altura inteira cadastrada:',
+      alturaUsuarioCm
+    );
+
+    console.log(
+      '📐 Altura física cadastrada da camiseta:',
+      alturaCamisetaCatalogoCm
     );
 
     console.log(
@@ -1082,8 +1151,33 @@ function ClothingModel({
     );
 
     console.log(
-      '📍 Altura usada para posicionamento:',
-      alturaOmbros
+      '📍 Regra de posicionamento:',
+      CAMISETA_P.placement
+    );
+
+    console.log(
+      '📍 Altura usada somente para posicionamento:',
+      alturaReferenciaCm
+    );
+
+    console.log(
+      '📍 Folga acima da referência:',
+      folgaSuperiorCm
+    );
+
+    console.log(
+      '📍 Altura de referência para posicionamento (cm):',
+      alturaReferenciaCm
+    );
+
+    console.log(
+      '📍 Folga acima da referência (cm):',
+      folgaSuperiorCm
+    );
+
+    console.log(
+      '📍 Altura usada para posicionamento (m):',
+      alturaReferencia
     );
   }, [
     model,
