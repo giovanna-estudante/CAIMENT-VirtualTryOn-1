@@ -917,43 +917,44 @@ function ClothingModel({
       scaledCenter
     );
 
+    console.log('🧩 ÂNCORA DA CAMISETA');
+    console.log('Box min Y:', scaledBox.min.y);
+    console.log('Box max Y:', scaledBox.max.y);
+    console.log('Centro Y:', scaledCenter.y);
+    console.log('Altura Y:', scaledSize.y);
+
+    console.log(
+      'Distância centro → topo:',
+      scaledBox.max.y - scaledCenter.y
+    );
+
+    console.log(
+      'Distância centro → base:',
+      scaledCenter.y - scaledBox.min.y
+    );
+
     // ========================================================
     // POSICIONAMENTO DA ROUPA — SOMENTE POSICIONAMENTO
     //
-    // IMPORTANTE:
-    // alturaPeCintura e alturaCinturaOmbros NÃO participam
-    // da escala da roupa, não criam limite de tamanho e não
-    // substituem a altura total do usuário.
+    // A escala e a orientação já foram calculadas acima.
+    // Aqui usamos somente as medidas do corpo para descobrir
+    // onde a peça deve ficar no avatar já escalado.
     //
-    // Elas servem apenas para descobrir ONDE a peça começa
-    // no corpo do avatar.
-    //
-    // CAMISETA:
-    // - começa na região dos ombros;
-    // - alturaPeCintura + alturaCinturaOmbros = altura dos
-    //   ombros medida a partir dos pés;
-    // - acrescentamos uma pequena folga acima dos ombros
-    //   para evitar que a gola atravesse o avatar.
+    // CAMISETA / VESTIDO:
+    // pés → cintura → ombros → margem de segurança → topo.
     //
     // CALÇA:
-    // - começa na cintura;
-    // - usa somente alturaPeCintura.
+    // pés → cintura → margem de segurança → topo.
     //
-    // VESTIDO:
-    // - começa na região dos ombros;
-    // - usa a mesma referência de ombros da camiseta.
-    //
-    // A escala continua sendo calculada ANTES e continua
-    // usando somente a altura total do avatar + altura total
-    // cadastrada do usuário + altura física da peça.
+    // As medidas são convertidas proporcionalmente para o
+    // tamanho final do avatar. Isso NÃO altera a escala da roupa.
     // ========================================================
 
     let alturaReferenciaCm: number;
-    let folgaSuperiorCm = 0;
+    let margemSegurancaCm = 0;
 
     if (CAMISETA_P.placement === 'ombros') {
-      // Para peças que começam nos ombros, a distância desde
-      // os pés até os ombros é a soma dessas duas medidas.
+      // A referência dos ombros começa nos pés do avatar.
       if (
         medidas.alturaPeCintura !== undefined &&
         medidas.alturaCinturaOmbros !== undefined
@@ -962,59 +963,86 @@ function ClothingModel({
           medidas.alturaPeCintura +
           medidas.alturaCinturaOmbros;
       } else {
-        // Fallback apenas de posicionamento caso as duas
-        // medidas do ponto dos ombros não estejam disponíveis.
+        // Fallback somente para posicionamento.
         alturaReferenciaCm =
           medidas.altura * 0.68;
       }
 
-      // A camiseta começa um pouco acima dos ombros.
-      // Esta folga também é SOMENTE posicionamento.
-      folgaSuperiorCm = 2;
+      // Evita que a gola entre no corpo do avatar.
+      margemSegurancaCm = 2;
     } else {
-      // Para uma calça, a referência é diretamente a cintura.
-      // Esta regra não é usada pela camiseta atual, mas fica
-      // explícita para quando outro tipo de peça for incluído.
+      // Para peças que começam na cintura.
       alturaReferenciaCm =
         medidas.alturaPeCintura ??
         medidas.altura * 0.5;
     }
 
+    // Fator que transforma as medidas cadastradas do usuário
+    // em medidas proporcionais ao avatar final de 3,4 m.
+    const alturaAvatarM =
+      avatarFitData.size.y;
+
+    const alturaUsuarioM =
+      medidas.altura / 100;
+
+    const fatorReferenciaAvatar =
+      alturaAvatarM / alturaUsuarioM;
+
+    // Distância dos pés até o ponto de início da roupa
+    // dentro do espaço final do avatar.
     const alturaReferencia =
-      (alturaReferenciaCm / medidas.altura) *
-      avatarFitData.size.y;
+      (alturaReferenciaCm / 100) *
+      fatorReferenciaAvatar;
 
-    const folgaSuperior =
-      (folgaSuperiorCm / medidas.altura) *
-      avatarFitData.size.y;
+    // Margem de segurança convertida para o mesmo espaço.
+    const margemSeguranca =
+      (margemSegurancaCm / 100) *
+      fatorReferenciaAvatar;
 
-    // O ponto calculado acima é usado somente para definir
-    // onde fica o topo da peça no avatar.
+    // O Box3 da roupa é usado somente para posicionar seu
+    // centro no ponto calculado. Ele não altera sua escala.
     const topoRoupa =
       avatarFitData.box.min.y +
       alturaReferencia +
-      folgaSuperior;
+      margemSeguranca;
 
-    const centroRoupaY =
+    // A linha dos ombros da camiseta fica abaixo
+    // do ponto mais alto da geometria.
+    const deslocamentoOmbrosCamiseta = 0.30;
+
+    const ancoraOmbrosCamiseta =
+      scaledBox.max.y -
+      deslocamentoOmbrosCamiseta;
+
+    const posicaoY =
       topoRoupa -
-      scaledSize.y / 2;
-
-    // ========================================================
-    // CENTRALIZA NO AVATAR
-    // ========================================================
+      ancoraOmbrosCamiseta;
 
     group.position.set(
       avatarFitData.center.x -
         scaledCenter.x,
 
-      centroRoupaY -
-        scaledCenter.y,
+      posicaoY,
 
       avatarFitData.center.z -
         scaledCenter.z
     );
 
     group.updateMatrixWorld(true);
+
+    const roupaDepoisDaPosicao = new Box3().setFromObject(group);
+
+    console.log('👕 CAMISETA DEPOIS DO POSICIONAMENTO');
+    console.log('Min Y final:', roupaDepoisDaPosicao.min.y);
+    console.log('Max Y final:', roupaDepoisDaPosicao.max.y);
+    console.log('Altura final:', roupaDepoisDaPosicao.max.y - roupaDepoisDaPosicao.min.y);
+
+    console.log('🎯 Referência dos ombros:', topoRoupa);
+
+    console.log(
+      '📏 Diferença entre topo da roupa e referência:',
+      roupaDepoisDaPosicao.max.y - topoRoupa
+    );
 
     // ========================================================
     // DIMENSÃO FINAL
@@ -1162,7 +1190,7 @@ function ClothingModel({
 
     console.log(
       '📍 Folga acima da referência:',
-      folgaSuperiorCm
+      margemSegurancaCm
     );
 
     console.log(
@@ -1172,7 +1200,7 @@ function ClothingModel({
 
     console.log(
       '📍 Folga acima da referência (cm):',
-      folgaSuperiorCm
+      margemSegurancaCm
     );
 
     console.log(
