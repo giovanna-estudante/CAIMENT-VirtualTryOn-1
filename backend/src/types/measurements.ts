@@ -36,6 +36,7 @@ export interface UnisexMeasurements {
   alturaPeCintura: number;
   alturaCinturaOmbros: number;
   ombros: number;
+  busto: number;
   torax?: number;
   cintura?: number;
   quadril?: number;
@@ -135,6 +136,7 @@ export interface EditableMeasurements {
   alturaCinturaOmbros: number;
   ombros: number;
   torax?: number;
+  busto: number;
   cintura?: number;
   quadril?: number;
 }

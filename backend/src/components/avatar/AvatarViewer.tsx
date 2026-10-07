@@ -694,49 +694,301 @@ function ClothingModel({
     );
 
     // ========================================================
-    // APLICA SHAPE KEYS
+    // MODELO MATEMÁTICO DAS SHAPE KEYS
+    //
+    // REGRA:
+    //
+    // 1. A roupa primeiro é colocada na escala física BASE.
+    // 2. Depois calculamos as medidas físicas da roupa.
+    // 3. Comparamos essas medidas com as medidas do usuário.
+    // 4. Cada Shape Key recebe uma influência baseada na
+    //    capacidade REAL daquela Shape Key de alterar a medida.
+    //
+    // NÃO:
+    //
+    // diferença percentual = influência
+    //
+    // SIM:
+    //
+    // necessidade física / capacidade da Shape Key = influência
+    //
+    // Exemplo:
+    //
+    // Roupa = 100 cm de tórax
+    // Shape Key Tórax em 1.0 = +10 cm
+    // Usuário precisa de 106 cm
+    //
+    // necessidade = 6 cm
+    // capacidade = 10 cm
+    // influência = 6 / 10 = 0.60
+    //
     // ========================================================
 
-    for (
-      const config of CAMISETA_P.shapeKeys
+
+    // ========================================================
+    // ESCALA FÍSICA BASE DA PEÇA
+    //
+    // ATENÇÃO:
+    //
+    // Esta escala NÃO veste o avatar.
+    //
+    // Ela apenas transforma o tamanho original do GLB para
+    // a dimensão física cadastrada da peça.
+    //
+    // Depois dela, NÃO haverá outra escala para adaptar o
+    // corpo do usuário.
+    // ========================================================
+
+    const clothingBoxBase =
+      new Box3().setFromObject(model);
+
+    const clothingSizeBase =
+      new Vector3();
+
+    clothingBoxBase.getSize(
+      clothingSizeBase
+    );
+
+    if (
+      clothingSizeBase.x <= 0 ||
+      clothingSizeBase.y <= 0 ||
+      clothingSizeBase.z <= 0
     ) {
-      const valorCorpo =
-        medidas[
-          config.measurement
-        ];
+      console.error(
+        '❌ Dimensão física inicial da roupa inválida.'
+      );
 
-      const valorRoupa =
-        CAMISETA_P.measurements[
-          config.measurement
-        ];
+      return;
+    }
 
-      // Só aplica se a roupa tiver
-      // uma medida correspondente.
-      if (
-        valorCorpo === undefined ||
-        valorRoupa === undefined ||
-        valorRoupa <= 0
-      ) {
-        continue;
+
+    // --------------------------------------------------------
+    // MEDIDAS FÍSICAS CADASTRADAS DA PEÇA
+    //
+    // Use aqui os valores REAIS já cadastrados para a peça.
+    //
+    // NÃO coloque P/M/G/GG.
+    //
+    // NÃO use medidas do usuário.
+    //
+    // Exemplo:
+    //
+    // largura = 49.9 cm
+    // comprimento = 70 cm
+    //
+    // Os valores abaixo devem ser substituídos pelos valores
+    // que já existem no seu cadastro da camiseta.
+    // --------------------------------------------------------
+
+    const larguraRoupaCm =
+      CAMISETA_P.measurements.largura;
+
+    const comprimentoRoupaCm =
+      CAMISETA_P.measurements.comprimento;
+
+    if (
+      larguraRoupaCm === undefined ||
+      comprimentoRoupaCm === undefined ||
+      larguraRoupaCm <= 0 ||
+      comprimentoRoupaCm <= 0
+    ) {
+      console.error(
+        '❌ Medidas físicas da camiseta não cadastradas corretamente.'
+      );
+
+      return;
+    }
+
+
+    // ========================================================
+    // ESCALA BASE FÍSICA
+    //
+    // Como a regra dos eixos já foi definida:
+    //
+    // Three X = largura
+    // Three Y = altura
+    // Three Z = profundidade
+    //
+    // A escala base usa a largura física cadastrada.
+    //
+    // Não usamos altura do avatar.
+    // Não usamos altura do usuário.
+    // Não usamos P/M/G/GG.
+    // ========================================================
+
+    const larguraRoupaBaseM =
+      larguraRoupaCm / 100;
+
+    const escalaFisicaBase =
+      larguraRoupaBaseM /
+      clothingSizeBase.x;
+
+    group.scale.set(
+      escalaFisicaBase,
+      escalaFisicaBase,
+      escalaFisicaBase
+    );
+
+    group.updateMatrixWorld(
+      true
+    );
+
+
+    // ========================================================
+    // MEDE A ROUPA DEPOIS DA ESCALA FÍSICA BASE
+    // ========================================================
+
+    const clothingBoxPhysical =
+      new Box3().setFromObject(
+        group
+      );
+
+    const clothingSizePhysical =
+      new Vector3();
+
+    clothingBoxPhysical.getSize(
+      clothingSizePhysical
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '📐 ESCALA FÍSICA BASE DA ROUPA'
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '📏 Largura cadastrada:',
+      larguraRoupaCm,
+      'cm'
+    );
+
+    console.log(
+      '📏 Largura GLB:',
+      clothingSizeBase.x,
+      'm'
+    );
+
+    console.log(
+      '📐 Escala física base:',
+      escalaFisicaBase
+    );
+
+    console.log(
+      '📐 Dimensão física inicial:',
+      {
+        largura:
+          clothingSizePhysical.x * 100,
+
+        altura:
+          clothingSizePhysical.y * 100,
+
+        profundidade:
+          clothingSizePhysical.z * 100,
       }
+    );
 
-      const proporcao =
-        valorCorpo /
-        valorRoupa;
 
-      const diferenca =
-        Math.abs(
-          proporcao - 1
-        );
+    // ========================================================
+    // ZERA TODAS AS SHAPE KEYS
+    //
+    // A Basis é sempre o ponto inicial.
+    //
+    // A escala física já foi aplicada acima.
+    // Portanto, as Shape Keys trabalham sobre uma roupa
+    // que já está na escala física correta.
+    // ========================================================
 
-      const influencia =
-        Math.min(
-          1,
-          diferenca
+    model.traverse(
+      (child) => {
+        const mesh =
+          child as Mesh;
+
+        if (
+          !mesh.isMesh ||
+          !mesh.morphTargetInfluences
+        ) {
+          return;
+        }
+
+        mesh.morphTargetInfluences.fill(0);
+      }
+    );
+
+
+    // ========================================================
+    // CALIBRAÇÃO FÍSICA DAS SHAPE KEYS
+    //
+    // ESTES VALORES SÃO A CAPACIDADE DE DEFORMAÇÃO DE CADA
+    // SHAPE KEY QUANDO SUA INFLUÊNCIA = 1.0.
+    //
+    // EXEMPLO:
+    //
+    // delta: 8
+    //
+    // significa:
+    //
+    // Shape Key = 0
+    // → medida original
+    //
+    // Shape Key = 1
+    // → medida original + 8 cm
+    //
+    // NÃO significa tamanho P/M/G/GG.
+    //
+    // ========================================================
+
+    const SHAPE_KEY_CALIBRATION = {
+
+    Tórax: {
+      measurement: 'torax',
+      delta: 8,
+    },
+
+    Busto: {
+      measurement: 'torax',
+      delta: 8,
+    },
+
+    Cintura: {
+      measurement: 'cintura',
+      delta: 8,
+    },
+
+    Ombros: {
+      measurement: 'ombros',
+      delta: 5,
+    },
+
+  } as const;
+
+
+    // ========================================================
+    // FUNÇÃO DE APLICAÇÃO
+    // ========================================================
+
+    const aplicarShapeKey = (
+      nomeShapeKey: string,
+      influencia: number
+    ) => {
+
+      const valor =
+        Math.max(
+          0,
+          Math.min(
+            1,
+            influencia
+          )
         );
 
       model.traverse(
         (child) => {
+
           const mesh =
             child as Mesh;
 
@@ -750,21 +1002,354 @@ function ClothingModel({
 
           const index =
             mesh.morphTargetDictionary[
-              config.key
+              nomeShapeKey
             ];
 
           if (
-            index !== undefined
+            index === undefined
           ) {
-            mesh.morphTargetInfluences[
-              index
-            ] = influencia;
+            return;
           }
+
+          mesh.morphTargetInfluences[
+            index
+          ] = valor;
+        }
+      );
+
+      console.log(
+        `🎯 Shape Key ${nomeShapeKey}:`,
+        valor
+      );
+    };
+
+
+    // ========================================================
+    // CALCULA A INFLUÊNCIA FÍSICA
+    //
+    // A fórmula agora é:
+    //
+    // influência = necessidade / capacidade
+    //
+    // NÃO:
+    //
+    // influência = diferença percentual
+    //
+    // Isso faz com que cada Shape Key tenha sua própria
+    // amplitude física.
+    // ========================================================
+
+    const calcularInfluenciaFisica = (
+      medidaUsuario: number | undefined,
+      medidaRoupa: number | undefined,
+      deltaShapeKey: number
+    ) => {
+
+      if (
+        medidaUsuario === undefined ||
+        medidaRoupa === undefined ||
+        medidaUsuario <= 0 ||
+        medidaRoupa <= 0 ||
+        deltaShapeKey <= 0
+      ) {
+        return 0;
+      }
+
+      const necessidade =
+        medidaUsuario -
+        medidaRoupa;
+
+      // ------------------------------------------------------
+      // Se o usuário não precisa aumentar essa região,
+      // esta Shape Key positiva não deve ser aplicada.
+      //
+      // Isso é importante porque não queremos transformar
+      // uma diferença negativa em uma influência positiva.
+      // ------------------------------------------------------
+
+      if (
+        necessidade <= 0
+      ) {
+        return 0;
+      }
+
+      const influencia =
+        necessidade /
+        deltaShapeKey;
+
+      return Math.max(
+        0,
+        Math.min(
+          1,
+          influencia
+        )
+      );
+    };
+
+
+    // ========================================================
+    // TÓRAX
+    // ========================================================
+
+    if (
+      medidas.torax !== undefined &&
+      CAMISETA_P.measurements.torax !== undefined
+    ) {
+
+      const calibration =
+        SHAPE_KEY_CALIBRATION.Tórax;
+
+      const influencia =
+        calcularInfluenciaFisica(
+          medidas.torax,
+          CAMISETA_P.measurements.torax,
+          calibration.delta
+        );
+
+      aplicarShapeKey(
+        'Tórax',
+        influencia
+      );
+
+      console.log(
+        '📐 Tórax:',
+        {
+          usuario:
+            medidas.torax,
+
+          roupa:
+            CAMISETA_P.measurements.torax,
+
+          necessidade:
+            medidas.torax -
+            CAMISETA_P.measurements.torax,
+
+          capacidadeShapeKey:
+            calibration.delta,
+
+          influencia,
         }
       );
     }
 
-    group.updateMatrixWorld(true);
+
+    // ========================================================
+    // CINTURA
+    // ========================================================
+
+    if (
+      medidas.cintura !== undefined &&
+      CAMISETA_P.measurements.cintura !== undefined
+    ) {
+
+      const calibration =
+        SHAPE_KEY_CALIBRATION.Cintura;
+
+      const influencia =
+        calcularInfluenciaFisica(
+          medidas.cintura,
+          CAMISETA_P.measurements.cintura,
+          calibration.delta
+        );
+
+      aplicarShapeKey(
+        'Cintura',
+        influencia
+      );
+
+      aplicarShapeKey(
+        'Ajuste lateral',
+        influencia
+      );
+
+      console.log(
+        '📐 Cintura:',
+        {
+          usuario:
+            medidas.cintura,
+
+          roupa:
+            CAMISETA_P.measurements.cintura,
+
+          necessidade:
+            medidas.cintura -
+            CAMISETA_P.measurements.cintura,
+
+          capacidadeShapeKey:
+            calibration.delta,
+
+          influencia,
+        }
+      );
+    }
+
+
+    // ========================================================
+    // OMBROS
+    // ========================================================
+
+    if (
+      medidas.ombros !== undefined &&
+      CAMISETA_P.measurements.ombros !== undefined
+    ) {
+
+      const calibration =
+        SHAPE_KEY_CALIBRATION.Ombros;
+
+      const influencia =
+        calcularInfluenciaFisica(
+          medidas.ombros,
+          CAMISETA_P.measurements.ombros,
+          calibration.delta
+        );
+
+      aplicarShapeKey(
+        'Ombros',
+        influencia
+      );
+
+      console.log(
+        '📐 Ombros:',
+        {
+          usuario:
+            medidas.ombros,
+
+          roupa:
+            CAMISETA_P.measurements.ombros,
+
+          necessidade:
+            medidas.ombros -
+            CAMISETA_P.measurements.ombros,
+
+          capacidadeShapeKey:
+            calibration.delta,
+
+          influencia,
+        }
+      );
+    }
+
+
+    // ========================================================
+    // CAIMENTO
+    //
+    // IMPORTANTE:
+    //
+    // Caimento NÃO recebe mais automaticamente a mesma
+    // porcentagem da cintura, tórax ou ombros.
+    //
+    // Ele só será aplicado quando tivermos uma regra física
+    // específica para o caimento.
+    //
+    // Portanto, por enquanto:
+    //
+    // Caimento = 0
+    //
+    // Isso evita deformar a peça sem saber o que a Shape Key
+    // representa fisicamente.
+    // ========================================================
+
+    aplicarShapeKey(
+      'Caimento',
+      0
+    );
+
+
+    // ========================================================
+    // BARRA
+    //
+    // Não relacionamos Barra automaticamente à cintura.
+    //
+    // Barra precisa de sua própria medida/regra física.
+    // ========================================================
+
+    aplicarShapeKey(
+      'Barra',
+      0
+    );
+
+
+    // ========================================================
+    // GOLA
+    //
+    // Só deve ser ativada quando houver uma medida específica
+    // de gola/pescoço cadastrada.
+    // ========================================================
+
+    aplicarShapeKey(
+      'Gola',
+      0
+    );
+
+
+    // ========================================================
+    // MANGA
+    //
+    // Não usamos medidas inexistentes no UserMeasurements.
+    //
+    // Só ativaremos quando existir no tipo de medidas do usuário
+    // uma medida corporal correspondente à manga.
+    // ========================================================
+
+    aplicarShapeKey(
+      'Manga',
+      0
+    );
+
+
+    // ========================================================
+    // FRENTE/COSTAS
+    //
+    // Não deve receber automaticamente a mesma influência de
+    // cintura ou tórax.
+    // ========================================================
+
+    aplicarShapeKey(
+      'Frente_Costas',
+      0
+    );
+
+
+    // ========================================================
+    // RESULTADO DAS SHAPE KEYS
+    // ========================================================
+
+    group.updateMatrixWorld(
+      true
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '🎯 AJUSTE FÍSICO POR SHAPE KEYS'
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '👕 Escala física base:',
+      escalaFisicaBase
+    );
+
+    console.log(
+      '🎯 Shape Keys aplicadas depois da escala física base.'
+    );
+
+    console.log(
+      '🚫 Escala global para vestir o usuário: NÃO'
+    );
+
+    console.log(
+      '🚫 P/M/G/GG: NÃO PARTICIPA'
+    );
+
+    console.log(
+      '🤖 Tamanho recomendado pela IA: INDEPENDENTE'
+    );
 
     // ========================================================
     // ORIENTAÇÃO
