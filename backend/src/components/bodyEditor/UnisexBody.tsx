@@ -63,6 +63,15 @@ export function UnisexBody({
   // ==========================================================
   // LARGURA DOS OMBROS
   // ==========================================================
+  //
+  // IMPORTANTE:
+  // A medida de ombros passa a controlar diretamente a
+  // largura física do modelo corporal.
+  //
+  // Isso também mantém a mesma referência que poderá ser
+  // utilizada posteriormente para a Shape Key "Ombros".
+  //
+  // ==========================================================
 
   const larguraOmbros = limitar(
     92 + (medidas.ombros - 40) * 3,
@@ -78,6 +87,23 @@ export function UnisexBody({
     82 + ((medidas.torax ?? 88) - 88) * 2.2,
     65,
     145
+  );
+
+  // ==========================================================
+  // LARGURA DO BUSTO
+  // ==========================================================
+  //
+  // O busto possui uma largura própria.
+  //
+  // Diferentemente da versão anterior, essa largura será
+  // realmente utilizada na geometria do tronco.
+  //
+  // ==========================================================
+
+  const larguraBusto = limitar(
+    82 + ((medidas.busto ?? 88) - 88) * 2.2,
+    65,
+    155
   );
 
   // ==========================================================
@@ -130,6 +156,13 @@ export function UnisexBody({
 
   const toraxY =
     cabecaY + 165 * escalaAltura;
+
+  // ----------------------------------------------------------
+  // O BUSTO FICA ABAIXO DO TÓRAX
+  // ----------------------------------------------------------
+
+  const bustoY =
+    cabecaY + 185 * escalaAltura;
 
   const cinturaY =
     cabecaY + 235 * escalaAltura;
@@ -234,7 +267,25 @@ export function UnisexBody({
 
         {/* ==================================================
             TRONCO DINÂMICO
-            ================================================== */}
+            ==================================================
+            
+            A geometria agora possui quatro regiões principais:
+
+            OMBROS
+                 ↓
+            TÓRAX
+                 ↓
+            BUSTO
+                 ↓
+            CINTURA
+                 ↓
+            QUADRIL
+
+            O busto NÃO é mais ignorado.
+
+            larguraBusto controla diretamente a largura do
+            corpo na região de bustoY.
+        ================================================== */}
 
         <path
           d={`
@@ -251,8 +302,15 @@ export function UnisexBody({
             L ${centro - larguraTorax / 2 + 7}
               ${toraxY}
 
-            C ${centro - larguraTorax / 2 + 11}
-              ${toraxY + 25 * escalaAltura}
+            C ${centro - larguraTorax / 2 + 8}
+              ${toraxY + 12 * escalaAltura}
+              ${centro - larguraBusto / 2 - 2}
+              ${bustoY - 18 * escalaAltura}
+              ${centro - larguraBusto / 2}
+              ${bustoY}
+
+            C ${centro - larguraBusto / 2 + 3}
+              ${bustoY + 18 * escalaAltura}
               ${centro - larguraCintura / 2 - 4}
               ${cinturaY - 20 * escalaAltura}
               ${centro - larguraCintura / 2}
@@ -288,8 +346,15 @@ export function UnisexBody({
 
             C ${centro + larguraCintura / 2 + 4}
               ${cinturaY - 20 * escalaAltura}
-              ${centro + larguraTorax / 2 - 11}
-              ${toraxY + 25 * escalaAltura}
+              ${centro + larguraBusto / 2 - 3}
+              ${bustoY + 18 * escalaAltura}
+              ${centro + larguraBusto / 2}
+              ${bustoY}
+
+            C ${centro + larguraBusto / 2 + 2}
+              ${bustoY - 18 * escalaAltura}
+              ${centro + larguraTorax / 2 - 8}
+              ${toraxY + 12 * escalaAltura}
               ${centro + larguraTorax / 2 - 7}
               ${toraxY}
 
@@ -628,6 +693,10 @@ export function UnisexBody({
           PONTOS DE MEDIÇÃO
           ==================================================== */}
 
+      {/* ==================================================
+          OMBROS
+          ================================================== */}
+
       <MeasurementPoint
         medida="ombros"
         x={50}
@@ -644,6 +713,10 @@ export function UnisexBody({
         }
         onChange={onChangeMeasurement}
       />
+
+      {/* ==================================================
+          TÓRAX
+          ================================================== */}
 
       <MeasurementPoint
         medida="torax"
@@ -662,10 +735,41 @@ export function UnisexBody({
         onChange={onChangeMeasurement}
       />
 
+      {/* ==================================================
+          BUSTO
+          ==================================================
+          
+          NOVO PONTO:
+          O cadastro agora controla diretamente a região que
+          alimenta larguraBusto.
+          
+      ================================================== */}
+
+      <MeasurementPoint
+        medida="busto"
+        x={50}
+        y={42}
+        valor={medidas.busto ?? 0}
+        valorBase={88}
+        valorMinimo={50}
+        valorMaximo={150}
+        selecionado={
+          medidaSelecionada === "busto"
+        }
+        onClick={() =>
+          onSelectMeasurement?.("busto")
+        }
+        onChange={onChangeMeasurement}
+      />
+
+      {/* ==================================================
+          CINTURA
+          ================================================== */}
+
       <MeasurementPoint
         medida="cintura"
         x={50}
-        y={48}
+        y={50}
         valor={medidas.cintura ?? 0}
         valorBase={70}
         valorMinimo={45}
@@ -678,6 +782,10 @@ export function UnisexBody({
         }
         onChange={onChangeMeasurement}
       />
+
+      {/* ==================================================
+          QUADRIL
+          ================================================== */}
 
       <MeasurementPoint
         medida="quadril"
@@ -696,6 +804,10 @@ export function UnisexBody({
         onChange={onChangeMeasurement}
       />
 
+      {/* ==================================================
+          ALTURA
+          ================================================== */}
+
       <MeasurementPoint
         medida="altura"
         x={10}
@@ -713,9 +825,10 @@ export function UnisexBody({
         onChange={onChangeMeasurement}
       />
 
-      {/*
-        PONTOS UTILIZADOS PARA POSTERIORMENTE POSICIONAR A PEÇA DE ROUPA
-      */}
+      {/* ==================================================
+          ALTURA PÉ → CINTURA
+          ================================================== */}
+
       <MeasurementPoint
         medida="alturaPeCintura"
         x={10}
@@ -732,6 +845,10 @@ export function UnisexBody({
         }
         onChange={onChangeMeasurement}
       />
+
+      {/* ==================================================
+          ALTURA CINTURA → OMBROS
+          ================================================== */}
 
       <MeasurementPoint
         medida="alturaCinturaOmbros"

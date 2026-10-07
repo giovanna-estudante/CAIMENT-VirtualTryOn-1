@@ -114,6 +114,7 @@ export default function RegisterMeasurementsPage() {
       alturaCinturaOmbros: 45,
       ombros: 40,
       torax: 88,
+      busto: 88,
       cintura: 70,
       quadril: 96,
     });
@@ -136,6 +137,7 @@ export default function RegisterMeasurementsPage() {
               medidasSalvas.alturaCinturaOmbros ?? 45,
             ombros: medidasSalvas.ombros ?? 40,
             torax: medidasSalvas.torax ?? 88,
+            busto: medidasSalvas.busto ?? 88,
             cintura: medidasSalvas.cintura ?? 70,
             quadril: medidasSalvas.quadril ?? 96,
           });

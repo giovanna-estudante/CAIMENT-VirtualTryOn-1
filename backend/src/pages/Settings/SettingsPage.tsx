@@ -23,6 +23,7 @@
 //     ├── torax
 //     ├── cintura
 //     └── quadril
+//     └── busto
 //
 // Os dados são salvos no Firebase em:
 //
@@ -605,6 +606,7 @@ export default function SettingsPage() {
         measurements.altura,
         measurements.ombros,
         measurements.torax,
+        measurements.busto,
         measurements.cintura,
         measurements.quadril,
       ];
@@ -1026,6 +1028,33 @@ export default function SettingsPage() {
 
                     </div>
 
+                    {/* BUSTO */}
+
+                    <div>
+
+                      <label className="text-xs font-medium text-caiment-ink-soft">
+                        Busto (cm)
+                      </label>
+
+                      <input
+                        type="number"
+                        min="1"
+                        value={
+                          measurements.busto ||
+                          ''
+                        }
+                        onChange={(event) =>
+                          updateMeasurement(
+                            'busto',
+                            event.target.value,
+                          )
+                        }
+                        placeholder="Ex.: 92"
+                        className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
+                      />
+
+                    </div>
+
                     {/* CINTURA */}
 
                     <div>
@@ -1091,10 +1120,7 @@ export default function SettingsPage() {
                       <input
                         type="number"
                         min="1"
-                        value={
-                          measurements.alturaPeCintura ||
-                          ''
-                        }
+                        value={measurements.alturaPeCintura || ''}
                         onChange={(event) =>
                           updateMeasurement(
                             'alturaPeCintura',
@@ -1105,32 +1131,29 @@ export default function SettingsPage() {
                         className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
                       />
 
-                      {/* ALTURA CINTURA OMBROS */}
+                    </div>
 
-                      <div>
+                    {/* ALTURA CINTURA OMBROS */}
 
-                        <label className="text-xs font-medium text-caiment-ink-soft">
-                          Tronco (considera da cintura até seus ombros) (cm)
-                        </label>
+                    <div>
 
-                        <input
-                          type="number"
-                          min="1"
-                          value={
-                            measurements.alturaCinturaOmbros ||
-                            ''
-                          }
-                          onChange={(event) =>
-                            updateMeasurement(
-                              'alturaCinturaOmbros',
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Ex.: 46"
-                          className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
-                        />
+                      <label className="text-xs font-medium text-caiment-ink-soft">
+                        Tronco (considere da cintura até seus ombros) (cm)
+                      </label>
 
-                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        value={measurements.alturaCinturaOmbros || ''}
+                        onChange={(event) =>
+                          updateMeasurement(
+                            'alturaCinturaOmbros',
+                            event.target.value,
+                          )
+                        }
+                        placeholder="Ex.: 46"
+                        className="mt-1.5 w-full rounded-2xl border border-caiment-line bg-white px-4 py-3 text-sm text-caiment-ink outline-none transition focus:border-caiment-purple-500"
+                      />
 
                     </div>
                   </div>

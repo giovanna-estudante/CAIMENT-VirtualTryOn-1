@@ -229,6 +229,15 @@ export default function AvatarPage() {
                   />
 
                   {/*
+                    Busto 
+                  */}
+                  <MeasurementCard
+                    label="Busto"
+                    value={measurements.torax}
+                    unit="cm"
+                  />
+
+                  {/*
                     Cintura 
                   */}
                   <MeasurementCard

@@ -65,14 +65,14 @@ export default function RegisterPage() {
 
       console.log('4. Perfil salvo no Firestore!');
 
-console.log('5. Usuário autenticado:', user.uid);
-console.log('6. Redirecionando para a etapa de medidas...');
+      console.log('5. Usuário autenticado:', user.uid);
+      console.log('6. Redirecionando para a etapa de medidas...');
 
-// Pequeno atraso para garantir que o estado de autenticação
-// seja atualizado antes da troca de página - segunda etapa do cadastro.
-setTimeout(() => {
-  navigate('/cadastro/medidas', { replace: true });
-}, 100);
+      // Pequeno atraso para garantir que o estado de autenticação
+      // seja atualizado antes da troca de página - segunda etapa do cadastro.
+      setTimeout(() => {
+        navigate('/cadastro/medidas', { replace: true });
+      }, 100);
 
     } catch (error: any) {
       console.error('ERRO NO CADASTRO:', error);

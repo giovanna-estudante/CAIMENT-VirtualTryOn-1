@@ -129,6 +129,7 @@ interface ClothingMeasurements {
   profundidade?: number;
   comprimento?: number;
   torax?: number;
+  busto?: number;
   cintura?: number;
   ombros?: number;
   manga?: number;
@@ -136,6 +137,7 @@ interface ClothingMeasurements {
 
 type BodyMeasurementName =
   | 'torax'
+  | 'busto'
   | 'cintura'
   | 'ombros';
 
@@ -632,7 +634,7 @@ function ClothingModel({
         },
         {
           key: 'Busto',
-          measurement: 'torax',
+          measurement: 'busto',
         },
         {
           key: 'Cintura',
@@ -951,8 +953,8 @@ function ClothingModel({
     },
 
     Busto: {
-      measurement: 'torax',
-      delta: 8,
+      measurement: 'busto',
+      delta: 2,
     },
 
     Cintura: {
@@ -1123,6 +1125,52 @@ function ClothingModel({
           necessidade:
             medidas.torax -
             CAMISETA_P.measurements.torax,
+
+          capacidadeShapeKey:
+            calibration.delta,
+
+          influencia,
+        }
+      );
+    }
+
+
+    // ========================================================
+    // BUSTO
+    // ========================================================
+
+    if (
+      medidas.busto !== undefined &&
+      CAMISETA_P.measurements.busto !== undefined
+    ) {
+
+      const calibration =
+        SHAPE_KEY_CALIBRATION.Busto;
+
+      const influencia =
+        calcularInfluenciaFisica(
+          medidas.busto,
+          CAMISETA_P.measurements.busto,
+          calibration.delta
+        );
+
+      aplicarShapeKey(
+        'Busto',
+        influencia
+      );
+
+      console.log(
+        '📐 Busto:',
+        {
+          usuario:
+            medidas.busto,
+
+          roupa:
+            CAMISETA_P.measurements.busto,
+
+          necessidade:
+            medidas.busto -
+            CAMISETA_P.measurements.busto,
 
           capacidadeShapeKey:
             calibration.delta,

@@ -56,6 +56,7 @@ export interface Measurements {
   waist: number; // cm
   hip: number; // cm
   shoulders: number; // cm
+  bust: number; // cm
   arm: number; // cm
   leg: number; // cm
 }

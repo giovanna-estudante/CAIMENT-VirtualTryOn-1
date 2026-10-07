@@ -15,6 +15,7 @@ const defaultMeasurements: UnisexMeasurements = {
   alturaPeCintura: 100,
   alturaCinturaOmbros: 45,
   ombros: 39,
+  busto: 92,
   torax: 92,
   cintura: 74,
   quadril: 98,
@@ -26,6 +27,7 @@ const measurementLabels: Record<keyof UnisexMeasurements, string> = {
   alturaCinturaOmbros: 'Altura cintura até ombros',
   ombros: 'Ombros',
   torax: 'Tórax',
+  busto: 'Busto',
   cintura: 'Cintura',
   quadril: 'Quadril',
 };
@@ -51,6 +53,10 @@ const measurementRanges: Record<
     max: 60,
   },
   torax: {
+    min: 60,
+    max: 140,
+  },
+  busto: {
     min: 60,
     max: 140,
   },
@@ -98,6 +104,9 @@ export default function MeasurementsPage() {
           torax:
             savedMeasurements.torax ??
             defaultMeasurements.torax,
+          busto:
+            savedMeasurements.busto ??
+            defaultMeasurements.busto,
           cintura:
             savedMeasurements.cintura ??
             defaultMeasurements.cintura,
