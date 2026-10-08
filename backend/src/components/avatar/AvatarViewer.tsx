@@ -525,125 +525,6 @@ function ClothingModel({
           '👕 Roupa carregada.'
         );
 
-        // ========================================================
-        // DIAGNÓSTICO DAS SHAPE KEYS DO GLB
-        // ========================================================
-
-        console.log(
-          '===================================='
-        );
-
-        console.log(
-          '🧩 DIAGNÓSTICO DAS SHAPE KEYS'
-        );
-
-        console.log(
-          '===================================='
-        );
-
-        let meshesEncontradas = 0;
-        let meshesComShapeKeys = 0;
-
-        gltf.scene.traverse((child) => {
-          const mesh =
-            child as Mesh & {
-              morphTargetDictionary?: Record<string, number>;
-              morphTargetInfluences?: number[];
-            };
-
-          if (!mesh.isMesh) {
-            return;
-          }
-
-          meshesEncontradas++;
-
-          console.log(
-            '------------------------------------'
-          );
-
-          console.log(
-            '👕 Mesh:',
-            mesh.name
-          );
-
-          console.log(
-            '📦 UUID:',
-            mesh.uuid
-          );
-
-          console.log(
-            '🧩 morphTargetDictionary:',
-            mesh.morphTargetDictionary
-          );
-
-          console.log(
-            '🧩 morphTargetInfluences:',
-            mesh.morphTargetInfluences
-          );
-
-          if (
-            mesh.morphTargetDictionary &&
-            mesh.morphTargetInfluences
-          ) {
-            meshesComShapeKeys++;
-
-            const shapeKeys =
-              Object.entries(
-                mesh.morphTargetDictionary
-              );
-
-            console.log(
-              '🎨 Shape Keys encontradas:',
-              shapeKeys.map(
-                ([nome]) => nome
-              )
-            );
-
-            shapeKeys.forEach(
-              ([nome, indice]) => {
-                const influencia =
-                  mesh.morphTargetInfluences?.[
-                    indice
-                  ] ?? 0;
-
-                console.log(
-                  `🎨 Shape Key "${nome}" → índice ${indice} → influência ${influencia}`
-                );
-              }
-            );
-          } else {
-            console.log(
-              '⚠️ Esta mesh NÃO possui Shape Keys.'
-            );
-          }
-        });
-
-        console.log(
-          '===================================='
-        );
-
-        console.log(
-          '📊 RESUMO DAS SHAPE KEYS'
-        );
-
-        console.log(
-          '===================================='
-        );
-
-        console.log(
-          '📦 Meshes encontradas:',
-          meshesEncontradas
-        );
-
-        console.log(
-          '🎨 Meshes com Shape Keys:',
-          meshesComShapeKeys
-        );
-
-        console.log(
-          '===================================='
-        );
-
         gltf.scene.traverse(
           (child) => {
             const mesh =
@@ -996,8 +877,11 @@ function ClothingModel({
         (alturaUsuarioCm / 100)
       );
 
+    // Novo GLB base: Blender Z = 0,687 m de altura.
+    // A lógica de escala permanece a mesma; apenas a dimensão
+    // física de referência foi atualizada para o novo GLB.
     const alturaBaseCamisetaM =
-      0.70;
+      0.687;
 
     const escalaUniforme =
       alturaAlvo /
