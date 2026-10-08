@@ -10,8 +10,6 @@ export interface ClothingMeasurements {
   busto: number;
   cintura: number;
   quadril: number;
-  pernas: number;
-  tronco: number;
 }
 
 export interface DeformedClothing {
@@ -272,7 +270,7 @@ export class ClothingDeformer {
 
     setShapeKey(
       SHAPE_KEYS.Caimento,
-      0.25,
+      0,
     );
 
     /*
@@ -292,7 +290,7 @@ export class ClothingDeformer {
 
     setShapeKey(
       SHAPE_KEYS.Barra,
-      barraInfluence,
+      1.0,
     );
 
     /*

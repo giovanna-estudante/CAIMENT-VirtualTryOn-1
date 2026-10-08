@@ -59,6 +59,9 @@ import type {
 import {
   Box3,
   Vector3,
+} from 'three';
+
+import type {
   Group,
   Mesh,
   Object3D,
@@ -86,6 +89,11 @@ import {
   ErrorBoundary,
 } from '@/components/ui/ErrorBoundary';
 
+import {
+  ClothingDeformer,
+  type ClothingMeasurements,
+} from '../../../../src/services/clothing/ClothingDeformer';
+
 interface AvatarViewerProps {
   modelUrl?: string | null;
   clothingModelUrl?: string | null;
@@ -107,19 +115,17 @@ interface AvatarFitData {
 const CLOTHING_VISUAL_ROTATION_Y =
   Math.PI / 2;
 
-interface ClothingMeasurements {
-  largura?: number;
-  profundidade?: number;
-  comprimento?: number;
-  manga?: number;
-}
-
 type ClothingPlacement =
   | 'ombros'
   | 'cintura';
 
 interface ClothingProfile {
-  measurements: ClothingMeasurements;
+  measurements: {
+    largura?: number;
+    profundidade?: number;
+    comprimento?: number;
+    manga?: number;
+  };
   placement: ClothingPlacement;
 }
 
@@ -469,7 +475,7 @@ function AvatarModelObject({
 }
 
 // ============================================================
-// CARREGA E VESTE A ROUPA
+// CARREGA, DEFORMA E VESTE A ROUPA
 // ============================================================
 
 function ClothingModel({
@@ -484,24 +490,138 @@ function ClothingModel({
   const [model, setModel] =
     useState<Object3D | null>(null);
 
+  const [deformedUrl, setDeformedUrl] =
+    useState<string | null>(null);
+
   const groupRef =
     useRef<Group | null>(null);
 
   // ==========================================================
-  // CARREGA O GLB DA ROUPA
-  //
-  // As Shape Keys existentes no GLB são preservadas.
-  // Nenhuma Shape Key é alterada aqui.
+  // DEFORMA A ROUPA
   // ==========================================================
 
   useEffect(() => {
     let cancelled = false;
 
+    const deform = async () => {
+      if (!measurements) {
+        console.warn(
+          '⚠️ Medidas do usuário não disponíveis para deformação.'
+        );
+
+        return;
+      }
+
+      try {
+        console.log(
+          '===================================='
+        );
+
+        console.log(
+          '👕 INICIANDO DEFORMAÇÃO DA ROUPA'
+        );
+
+        console.log(
+          '===================================='
+        );
+
+        const clothingMeasurements: ClothingMeasurements = {
+          altura:
+            measurements.altura,
+
+          ombros:
+            measurements.ombros,
+
+          torax:
+            measurements.torax,
+
+          busto:
+            measurements.busto,
+
+          cintura:
+            measurements.cintura,
+
+          quadril:
+            measurements.quadril,
+        };
+
+        console.log(
+          '📏 Medidas enviadas para ClothingDeformer:',
+          clothingMeasurements
+        );
+
+        const deformer =
+          new ClothingDeformer();
+
+        const result =
+          await deformer.deform(
+            url,
+            clothingMeasurements
+          );
+
+        if (cancelled) {
+          result.revoke();
+          return;
+        }
+
+        console.log(
+          '✅ GLB deformado recebido.'
+        );
+
+        console.log(
+          '👕 URL da roupa deformada:',
+          result.url
+        );
+
+        setDeformedUrl(
+          result.url
+        );
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error(
+          '❌ Erro ao deformar roupa:',
+          error
+        );
+
+        setDeformedUrl(null);
+      }
+    };
+
+    deform();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    url,
+    measurements,
+  ]);
+
+  // ==========================================================
+  // CARREGA O GLB DEFORMADO
+  // ==========================================================
+
+  useEffect(() => {
+    if (!deformedUrl) {
+      setModel(null);
+      return;
+    }
+
+    let cancelled = false;
+
     const loader =
       new GLTFLoader();
 
+    console.log(
+      '👕 Carregando GLB DEFORMADO no AvatarViewer:',
+      deformedUrl
+    );
+
     loader.load(
-      url,
+      deformedUrl,
 
       (gltf) => {
         if (cancelled) {
@@ -509,7 +629,7 @@ function ClothingModel({
         }
 
         console.log(
-          '👕 Roupa carregada.'
+          '✅ Roupa DEFORMADA carregada no AvatarViewer.'
         );
 
         gltf.scene.traverse(
@@ -527,36 +647,54 @@ function ClothingModel({
           }
         );
 
-        setModel(gltf.scene);
+        setModel(
+          gltf.scene
+        );
       },
 
       undefined,
 
       (error) => {
+        if (cancelled) {
+          return;
+        }
+
         console.error(
-          '❌ Erro ao carregar roupa:',
+          '❌ Erro ao carregar GLB deformado:',
           error
         );
+
+        setModel(null);
       }
     );
 
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [
+    deformedUrl,
+  ]);
 
   // ==========================================================
-  // AJUSTA A ROUPA
+  // LIMPA O GLB DEFORMADO ANTERIOR
+  // ==========================================================
+
+  useEffect(() => {
+    return () => {
+      if (deformedUrl) {
+        URL.revokeObjectURL(
+          deformedUrl
+        );
+      }
+    };
+  }, [
+    deformedUrl,
+  ]);
+
+  // ==========================================================
+  // ESCALA, ORIENTAÇÃO E POSICIONAMENTO
   //
-  // NÃO HÁ DEFORMAÇÃO POR SHAPE KEYS.
-  //
-  // Esta etapa somente:
-  // 1. escala
-  // 2. orienta
-  // 3. posiciona
-  //
-  // As Shape Keys continuam disponíveis no GLB para a
-  // próxima etapa do CAIMENT.
+  // NÃO ALTERA SHAPE KEYS.
   // ==========================================================
 
   useEffect(() => {
@@ -618,7 +756,7 @@ function ClothingModel({
     group.updateMatrixWorld(true);
 
     // ========================================================
-    // ESCALA FÍSICA BASE
+    // MEDE A ROUPA DEFORMADA
     // ========================================================
 
     const clothingBoxBase =
@@ -639,11 +777,42 @@ function ClothingModel({
       clothingSizeBase.z <= 0
     ) {
       console.error(
-        '❌ Dimensão física inicial da roupa inválida.'
+        '❌ Dimensão física inicial da roupa deformada inválida.'
       );
 
       return;
     }
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '👕 DIMENSÕES DO GLB DEFORMADO'
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '📐 X:',
+      clothingSizeBase.x
+    );
+
+    console.log(
+      '📐 Y:',
+      clothingSizeBase.y
+    );
+
+    console.log(
+      '📐 Z:',
+      clothingSizeBase.z
+    );
+
+    // ========================================================
+    // ESCALA FÍSICA BASE
+    // ========================================================
 
     const larguraRoupaCm =
       CAMISETA_P.measurements.largura;
@@ -664,10 +833,6 @@ function ClothingModel({
       return;
     }
 
-    // ========================================================
-    // ESCALA BASE FÍSICA
-    // ========================================================
-
     const larguraRoupaBaseM =
       larguraRoupaCm / 100;
 
@@ -684,10 +849,6 @@ function ClothingModel({
     group.updateMatrixWorld(
       true
     );
-
-    // ========================================================
-    // MEDE APÓS ESCALA FÍSICA
-    // ========================================================
 
     const clothingBoxPhysical =
       new Box3().setFromObject(
@@ -706,7 +867,7 @@ function ClothingModel({
     );
 
     console.log(
-      '📐 ESCALA FÍSICA BASE DA ROUPA'
+      '📐 ESCALA FÍSICA BASE DA ROUPA DEFORMADA'
     );
 
     console.log(
@@ -720,7 +881,7 @@ function ClothingModel({
     );
 
     console.log(
-      '📏 Largura GLB:',
+      '📏 Largura GLB deformado:',
       clothingSizeBase.x,
       'm'
     );
@@ -776,27 +937,6 @@ function ClothingModel({
       orientedSize
     );
 
-    console.log(
-      '===================================='
-    );
-
-    console.log(
-      '👕 ROUPA APÓS ORIENTAÇÃO'
-    );
-
-    console.log(
-      '===================================='
-    );
-
-    console.log(
-      '📐 Dimensão antes da escala:',
-      {
-        x: orientedSize.x,
-        y: orientedSize.y,
-        z: orientedSize.z,
-      }
-    );
-
     if (
       orientedSize.x <= 0 ||
       orientedSize.y <= 0 ||
@@ -808,6 +948,27 @@ function ClothingModel({
 
       return;
     }
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '👕 ROUPA DEFORMADA APÓS ORIENTAÇÃO'
+    );
+
+    console.log(
+      '===================================='
+    );
+
+    console.log(
+      '📐 Dimensão orientada:',
+      {
+        x: orientedSize.x,
+        y: orientedSize.y,
+        z: orientedSize.z,
+      }
+    );
 
     // ========================================================
     // ESCALA DA CAMISETA
@@ -844,7 +1005,6 @@ function ClothingModel({
         (alturaUsuarioCm / 100)
       );
 
-    // Referência física do GLB atual.
     const alturaBaseCamisetaM =
       0.70;
 
@@ -882,7 +1042,7 @@ function ClothingModel({
     );
 
     console.log(
-      '🧩 ÂNCORA DA CAMISETA'
+      '🧩 ÂNCORA DA CAMISETA DEFORMADA'
     );
 
     console.log(
@@ -905,84 +1065,28 @@ function ClothingModel({
       scaledSize.y
     );
 
-    console.log(
-      'Distância centro → topo:',
-      scaledBox.max.y -
-        scaledCenter.y
-    );
-
-    console.log(
-      'Distância centro → base:',
-      scaledCenter.y -
-        scaledBox.min.y
-    );
-
     // ========================================================
     // POSICIONAMENTO
     // ========================================================
 
-    let alturaReferenciaCm: number;
+    const alturaOmbrosUsuarioCm =
+      medidas.alturaPeCintura +
+      medidas.alturaCinturaOmbros;
 
-    let margemSegurancaCm = 0;
+    const alturaOmbrosAvatar =
+      avatarFitData.size.y *
+      (
+        alturaOmbrosUsuarioCm /
+        alturaUsuarioCm
+      );
 
-    if (
-      CAMISETA_P.placement ===
-      'ombros'
-    ) {
-      if (
-        medidas.alturaPeCintura !==
-          undefined &&
-        medidas.alturaCinturaOmbros !==
-          undefined
-      ) {
-        alturaReferenciaCm =
-          medidas.alturaPeCintura +
-          medidas.alturaCinturaOmbros;
-      } else {
-        alturaReferenciaCm =
-          medidas.altura * 0.68;
-      }
-
-      margemSegurancaCm = 2;
-    } else {
-      alturaReferenciaCm =
-        medidas.alturaPeCintura ??
-        medidas.altura * 0.5;
-    }
-
-    const alturaAvatarM =
-      avatarFitData.size.y;
-
-    const alturaUsuarioM =
-      medidas.altura / 100;
-
-    const fatorReferenciaAvatar =
-      alturaAvatarM /
-      alturaUsuarioM;
-
-    const alturaReferencia =
-      (alturaReferenciaCm / 100) *
-      fatorReferenciaAvatar;
-
-    const margemSeguranca =
-      (margemSegurancaCm / 100) *
-      fatorReferenciaAvatar;
-
-    const topoRoupa =
+    const topoOmbrosAvatar =
       avatarFitData.box.min.y +
-      alturaReferencia +
-      margemSeguranca;
-
-    const deslocamentoOmbrosCamiseta =
-      0.30;
-
-    const ancoraOmbrosCamiseta =
-      scaledBox.max.y -
-      deslocamentoOmbrosCamiseta;
+      alturaOmbrosAvatar;
 
     const posicaoY =
-      topoRoupa -
-      ancoraOmbrosCamiseta;
+      topoOmbrosAvatar -
+      scaledBox.max.y;
 
     group.position.set(
       avatarFitData.center.x -
@@ -995,42 +1099,6 @@ function ClothingModel({
     );
 
     group.updateMatrixWorld(true);
-
-    const roupaDepoisDaPosicao =
-      new Box3().setFromObject(
-        group
-      );
-
-    console.log(
-      '👕 CAMISETA DEPOIS DO POSICIONAMENTO'
-    );
-
-    console.log(
-      'Min Y final:',
-      roupaDepoisDaPosicao.min.y
-    );
-
-    console.log(
-      'Max Y final:',
-      roupaDepoisDaPosicao.max.y
-    );
-
-    console.log(
-      'Altura final:',
-      roupaDepoisDaPosicao.max.y -
-        roupaDepoisDaPosicao.min.y
-    );
-
-    console.log(
-      '🎯 Referência dos ombros:',
-      topoRoupa
-    );
-
-    console.log(
-      '📏 Diferença entre topo da roupa e referência:',
-      roupaDepoisDaPosicao.max.y -
-        topoRoupa
-    );
 
     // ========================================================
     // DIMENSÃO FINAL
@@ -1055,16 +1123,12 @@ function ClothingModel({
       finalCenter
     );
 
-    // ========================================================
-    // LOGS
-    // ========================================================
-
     console.log(
       '===================================='
     );
 
     console.log(
-      '👕 ROUPA VESTIDA NO AVATAR'
+      '👕 ROUPA DEFORMADA VESTIDA NO AVATAR'
     );
 
     console.log(
@@ -1170,31 +1234,7 @@ function ClothingModel({
       '📍 Regra de posicionamento:',
       CAMISETA_P.placement
     );
-
-    console.log(
-      '📍 Altura usada somente para posicionamento:',
-      alturaReferenciaCm
-    );
-
-    console.log(
-      '📍 Folga acima da referência:',
-      margemSegurancaCm
-    );
-
-    console.log(
-      '📍 Altura de referência para posicionamento (cm):',
-      alturaReferenciaCm
-    );
-
-    console.log(
-      '📍 Folga acima da referência (cm):',
-      margemSegurancaCm
-    );
-
-    console.log(
-      '📍 Altura usada para posicionamento (m):',
-      alturaReferencia
-    );
+    
   }, [
     model,
     measurements,
