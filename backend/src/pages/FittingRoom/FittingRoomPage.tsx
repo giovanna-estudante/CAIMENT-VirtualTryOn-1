@@ -329,10 +329,11 @@ export default function FittingRoomPage() {
               >
 
                 <div className="relative overflow-hidden rounded-3xl bg-caiment-purple-50/60 p-3">
-
+                  
                   {avatarReady &&
                   modelUrl ? (
 
+                    
                     <AvatarViewer
                       modelUrl={modelUrl}
                       clothingModelUrl={product.clothingModel}

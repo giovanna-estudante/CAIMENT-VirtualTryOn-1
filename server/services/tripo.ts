@@ -332,37 +332,56 @@ export async function downloadModel(
   console.log('====================================');
 
   console.log(
-    `URL recebida: ${modelUrl}`
+    `Host: ${new URL(modelUrl).hostname}`
+  );
+
+  console.log(
+    `URL possui assinatura: ${
+      modelUrl.includes('Signature=') ||
+      modelUrl.includes('signature=')
+    }`
   );
 
   try {
     const response = await fetch(modelUrl);
 
     console.log(
-      `📡 Download do modelo → HTTP ${response.status}`
+      `📡 Download do modelo → HTTP ${response.status} ${response.statusText}`
     );
 
     if (!response.ok) {
       const text = await response.text();
 
       console.error(
-        `❌ Tripo recusou o download: HTTP ${response.status} ${response.statusText}`
+        '❌ Tripo recusou o download.'
       );
 
       console.error(
-        '📄 Resposta da Tripo:',
-        text
+        `HTTP: ${response.status}`
+      );
+
+      console.error(
+        `Status: ${response.statusText}`
+      );
+
+      console.error(
+        '📄 Resposta da Tripo:'
+      );
+
+      console.error(
+        text.slice(0, 2000)
       );
 
       throw new Error(
-        `Tripo recusou o download do modelo (${response.status} ${response.statusText}): ${text}`
+        `Tripo recusou o download do modelo (${response.status} ${response.statusText}): ${text.slice(0, 500)}`
       );
     }
 
     const arrayBuffer =
       await response.arrayBuffer();
 
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer =
+      Buffer.from(arrayBuffer);
 
     if (buffer.length === 0) {
       throw new Error(
@@ -371,7 +390,7 @@ export async function downloadModel(
     }
 
     console.log(
-      `✅ Modelo baixado com sucesso!`
+      '✅ Modelo baixado com sucesso!'
     );
 
     console.log(
@@ -381,10 +400,31 @@ export async function downloadModel(
     return buffer;
 
   } catch (error) {
+    console.error('');
     console.error(
-      '❌ Erro ao baixar modelo do Tripo:',
-      error
+      '❌ ERRO REAL AO BAIXAR MODELO DO TRIPO'
     );
+
+    if (error instanceof Error) {
+      console.error(
+        'Mensagem:',
+        error.message
+      );
+
+      console.error(
+        'Nome:',
+        error.name
+      );
+
+      console.error(
+        'Stack:',
+        error.stack
+      );
+    } else {
+      console.error(
+        error
+      );
+    }
 
     throw error;
   }

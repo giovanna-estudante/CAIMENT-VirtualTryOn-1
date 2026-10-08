@@ -52,7 +52,6 @@ export interface Avatar {
 
 export interface Measurements {
   height: number; // cm
-  bust: number; // cm
   waist: number; // cm
   hip: number; // cm
   shoulders: number; // cm

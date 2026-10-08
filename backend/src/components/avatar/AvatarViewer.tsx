@@ -26,6 +26,8 @@ IMPORTANTE:
   Y/altura e Z/profundidade.
 - As medidas cadastradas da camiseta permanecem com
   os mesmos valores definidos no código.
+- As Shape Keys permanecem dentro do GLB.
+- O AvatarViewer não altera Shape Keys.
 ============================================================
 */
 
@@ -100,29 +102,10 @@ interface AvatarFitData {
 
 // ============================================================
 // REGRA FIXA DE EIXOS — CAIMENT
-//
-// Blender/GLB → VSCode/Three.js:
-//
-// GLB X → Three X = largura
-// GLB Y → Three Z = profundidade
-// GLB Z → Three Y = altura
-//
-// Portanto, no VSCode:
-//
-// X = largura
-// Y = altura
-// Z = profundidade
-//
-// Esta conversão NÃO troca nem recalcula as medidas da roupa.
-// Ela somente coloca os eixos do GLB na convenção usada pelo
-// AvatarViewer.
-//
-// A rotação abaixo é somente o alinhamento visual da camiseta
-// com a orientação do avatar no Canvas.
-// Ela não altera os significados de X, Y e Z.
 // ============================================================
 
-const CLOTHING_VISUAL_ROTATION_Y = Math.PI / 2;
+const CLOTHING_VISUAL_ROTATION_Y =
+  Math.PI / 2;
 
 interface ClothingMeasurements {
   largura?: number;
@@ -165,7 +148,9 @@ function RealModel({
   url: string;
   onLoaded?: () => void;
   onError?: (error: unknown) => void;
-  onFitData?: (data: AvatarFitData) => void;
+  onFitData?: (
+    data: AvatarFitData
+  ) => void;
 }) {
   const [model, setModel] =
     useState<Object3D | null>(null);
@@ -284,7 +269,9 @@ function RealModel({
           error
         );
 
-        onErrorRef.current?.(error);
+        onErrorRef.current?.(
+          error
+        );
       }
     );
 
@@ -329,7 +316,6 @@ function AvatarModelObject({
       return;
     }
 
-    // Reseta transformações.
     group.scale.setScalar(1);
 
     group.position.set(
@@ -346,7 +332,6 @@ function AvatarModelObject({
 
     group.updateMatrixWorld(true);
 
-    // Mede o avatar original.
     const originalBox =
       new Box3().setFromObject(group);
 
@@ -365,7 +350,6 @@ function AvatarModelObject({
       return;
     }
 
-    // Altura padrão do avatar.
     const targetHeight = 3.4;
 
     const scale =
@@ -393,14 +377,12 @@ function AvatarModelObject({
       scaledSize
     );
 
-    // Centraliza o avatar.
     group.position.x =
       -scaledCenter.x;
 
     group.position.z =
       -scaledCenter.z;
 
-    // Encosta os pés no chão.
     group.position.y =
       -scaledBox.min.y;
 
@@ -479,7 +461,9 @@ function AvatarModelObject({
 
   return (
     <group ref={groupRef}>
-      <primitive object={model} />
+      <primitive
+        object={model}
+      />
     </group>
   );
 }
@@ -503,9 +487,12 @@ function ClothingModel({
   const groupRef =
     useRef<Group | null>(null);
 
-  // ----------------------------------------------------------
-  // Carrega o GLB da roupa.
-  // ----------------------------------------------------------
+  // ==========================================================
+  // CARREGA O GLB DA ROUPA
+  //
+  // As Shape Keys existentes no GLB são preservadas.
+  // Nenhuma Shape Key é alterada aqui.
+  // ==========================================================
 
   useEffect(() => {
     let cancelled = false;
@@ -558,16 +545,19 @@ function ClothingModel({
     };
   }, [url]);
 
-  // ----------------------------------------------------------
-  // Ajusta a roupa.
+  // ==========================================================
+  // AJUSTA A ROUPA
   //
-  // IMPORTANTE:
-  // Não existe mais deformação por Shape Keys.
+  // NÃO HÁ DEFORMAÇÃO POR SHAPE KEYS.
   //
-  // A roupa é carregada como um único modelo 3D e recebe
-  // somente os cálculos de escala, orientação e posicionamento
-  // já existentes.
-  // ----------------------------------------------------------
+  // Esta etapa somente:
+  // 1. escala
+  // 2. orienta
+  // 3. posiciona
+  //
+  // As Shape Keys continuam disponíveis no GLB para a
+  // próxima etapa do CAIMENT.
+  // ==========================================================
 
   useEffect(() => {
     const group =
@@ -600,10 +590,6 @@ function ClothingModel({
         manga: 23,
       },
 
-      // REGRA DE POSICIONAMENTO DA PEÇA:
-      // camiseta começa na região dos ombros.
-      // Esta regra serve SOMENTE para posicionar a roupa.
-      // Ela não participa do cálculo da escala.
       placement: 'ombros',
     };
 
@@ -632,16 +618,13 @@ function ClothingModel({
     group.updateMatrixWorld(true);
 
     // ========================================================
-    // ESCALA FÍSICA BASE DA PEÇA
-    //
-    // Esta parte permanece exatamente como estava.
-    //
-    // Ela transforma o tamanho original do GLB para a
-    // dimensão física cadastrada da peça.
+    // ESCALA FÍSICA BASE
     // ========================================================
 
     const clothingBoxBase =
-      new Box3().setFromObject(model);
+      new Box3().setFromObject(
+        model
+      );
 
     const clothingSizeBase =
       new Vector3();
@@ -661,12 +644,6 @@ function ClothingModel({
 
       return;
     }
-
-    // --------------------------------------------------------
-    // MEDIDAS FÍSICAS CADASTRADAS DA PEÇA
-    //
-    // Os valores continuam sendo os mesmos.
-    // --------------------------------------------------------
 
     const larguraRoupaCm =
       CAMISETA_P.measurements.largura;
@@ -689,12 +666,6 @@ function ClothingModel({
 
     // ========================================================
     // ESCALA BASE FÍSICA
-    //
-    // Three X = largura
-    // Three Y = altura
-    // Three Z = profundidade
-    //
-    // NÃO ALTERADO.
     // ========================================================
 
     const larguraRoupaBaseM =
@@ -715,7 +686,7 @@ function ClothingModel({
     );
 
     // ========================================================
-    // MEDE A ROUPA DEPOIS DA ESCALA FÍSICA BASE
+    // MEDE APÓS ESCALA FÍSICA
     // ========================================================
 
     const clothingBoxPhysical =
@@ -779,8 +750,6 @@ function ClothingModel({
     // GLB X → Three X = largura
     // GLB Y → Three Z = profundidade
     // GLB Z → Three Y = altura
-    //
-    // NÃO ALTERADO.
     // ========================================================
 
     group.rotation.set(
@@ -792,7 +761,7 @@ function ClothingModel({
     group.updateMatrixWorld(true);
 
     // ========================================================
-    // MEDE A ROUPA JÁ ORIENTADA
+    // MEDE A ROUPA ORIENTADA
     // ========================================================
 
     const orientedBox =
@@ -842,8 +811,6 @@ function ClothingModel({
 
     // ========================================================
     // ESCALA DA CAMISETA
-    //
-    // ESTA PARTE NÃO FOI ALTERADA.
     // ========================================================
 
     const alturaAvatar =
@@ -877,11 +844,9 @@ function ClothingModel({
         (alturaUsuarioCm / 100)
       );
 
-    // Novo GLB base: Blender Z = 0,687 m de altura.
-    // A lógica de escala permanece a mesma; apenas a dimensão
-    // física de referência foi atualizada para o novo GLB.
+    // Referência física do GLB atual.
     const alturaBaseCamisetaM =
-      0.687;
+      0.70;
 
     const escalaUniforme =
       alturaAlvo /
@@ -894,7 +859,7 @@ function ClothingModel({
     group.updateMatrixWorld(true);
 
     // ========================================================
-    // MEDE NOVAMENTE DEPOIS DA ESCALA
+    // MEDE APÓS ESCALA
     // ========================================================
 
     const scaledBox =
@@ -916,35 +881,59 @@ function ClothingModel({
       scaledCenter
     );
 
-    console.log('🧩 ÂNCORA DA CAMISETA');
-    console.log('Box min Y:', scaledBox.min.y);
-    console.log('Box max Y:', scaledBox.max.y);
-    console.log('Centro Y:', scaledCenter.y);
-    console.log('Altura Y:', scaledSize.y);
+    console.log(
+      '🧩 ÂNCORA DA CAMISETA'
+    );
+
+    console.log(
+      'Box min Y:',
+      scaledBox.min.y
+    );
+
+    console.log(
+      'Box max Y:',
+      scaledBox.max.y
+    );
+
+    console.log(
+      'Centro Y:',
+      scaledCenter.y
+    );
+
+    console.log(
+      'Altura Y:',
+      scaledSize.y
+    );
 
     console.log(
       'Distância centro → topo:',
-      scaledBox.max.y - scaledCenter.y
+      scaledBox.max.y -
+        scaledCenter.y
     );
 
     console.log(
       'Distância centro → base:',
-      scaledCenter.y - scaledBox.min.y
+      scaledCenter.y -
+        scaledBox.min.y
     );
 
     // ========================================================
-    // POSICIONAMENTO DA ROUPA — SOMENTE POSICIONAMENTO
-    //
-    // NÃO ALTERADO.
+    // POSICIONAMENTO
     // ========================================================
 
     let alturaReferenciaCm: number;
+
     let margemSegurancaCm = 0;
 
-    if (CAMISETA_P.placement === 'ombros') {
+    if (
+      CAMISETA_P.placement ===
+      'ombros'
+    ) {
       if (
-        medidas.alturaPeCintura !== undefined &&
-        medidas.alturaCinturaOmbros !== undefined
+        medidas.alturaPeCintura !==
+          undefined &&
+        medidas.alturaCinturaOmbros !==
+          undefined
       ) {
         alturaReferenciaCm =
           medidas.alturaPeCintura +
@@ -961,9 +950,6 @@ function ClothingModel({
         medidas.altura * 0.5;
     }
 
-    // Fator que transforma as medidas cadastradas do usuário
-    // em medidas proporcionais ao avatar final de 3,4 m.
-
     const alturaAvatarM =
       avatarFitData.size.y;
 
@@ -971,32 +957,24 @@ function ClothingModel({
       medidas.altura / 100;
 
     const fatorReferenciaAvatar =
-      alturaAvatarM / alturaUsuarioM;
-
-    // Distância dos pés até o ponto de início da roupa.
+      alturaAvatarM /
+      alturaUsuarioM;
 
     const alturaReferencia =
       (alturaReferenciaCm / 100) *
       fatorReferenciaAvatar;
 
-    // Margem de segurança.
-
     const margemSeguranca =
       (margemSegurancaCm / 100) *
       fatorReferenciaAvatar;
-
-    // O Box3 da roupa é usado somente para posicionar
-    // o centro no ponto calculado.
 
     const topoRoupa =
       avatarFitData.box.min.y +
       alturaReferencia +
       margemSeguranca;
 
-    // A linha dos ombros da camiseta fica abaixo
-    // do ponto mais alto da geometria.
-
-    const deslocamentoOmbrosCamiseta = 0.30;
+    const deslocamentoOmbrosCamiseta =
+      0.30;
 
     const ancoraOmbrosCamiseta =
       scaledBox.max.y -
@@ -1229,7 +1207,9 @@ function ClothingModel({
 
   return (
     <group ref={groupRef}>
-      <primitive object={model} />
+      <primitive
+        object={model}
+      />
     </group>
   );
 }
@@ -1311,12 +1291,8 @@ function Scene({
         {clothingModelUrl &&
           avatarFitData && (
             <ClothingModel
-              url={
-                clothingModelUrl
-              }
-              measurements={
-                measurements
-              }
+              url={clothingModelUrl}
+              measurements={measurements}
               avatarFitData={
                 avatarFitData
               }
@@ -1392,9 +1368,9 @@ export function AvatarViewer({
     setReady(false);
   }, [modelUrl]);
 
-  // ----------------------------------------------------------
-  // Reseta a câmera.
-  // ----------------------------------------------------------
+  // ==========================================================
+  // RESETA A CÂMERA
+  // ==========================================================
 
   const handleReset = () => {
     const controls =
@@ -1422,9 +1398,9 @@ export function AvatarViewer({
     controls.update();
   };
 
-  // ----------------------------------------------------------
-  // Zoom.
-  // ----------------------------------------------------------
+  // ==========================================================
+  // ZOOM
+  // ==========================================================
 
   const handleZoom = (
     dir: 1 | -1
@@ -1450,11 +1426,6 @@ export function AvatarViewer({
 
     controls.update();
   };
-
-  console.log(
-    '👕 URL DA ROUPA:',
-    clothingModelUrl
-  );
 
   return (
     <div
